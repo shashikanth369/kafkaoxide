@@ -4,6 +4,7 @@ members = [
   "crates/core",
   "crates/db",
   "crates/secrets",
+  "crates/kafka",
 ]
 
 [workspace.dependencies]

@@ -1,0 +1,18 @@
+# Build-time workaround for a bug in the vendored librdkafka source shipped by
+# rdkafka-sys 4.10.0+2.12.1 (pulled in by kafkaoxide-kafka's rdkafka dependency
+# with the `cmake-build` feature).
+#
+# src/rdkafka_conf.c includes <curl/curl.h> behind `#ifdef WITH_OAUTHBEARER_OIDC`
+# instead of `#if WITH_OAUTHBEARER_OIDC`. Because the generated config.h always
+# defines WITH_OAUTHBEARER_OIDC (to 0 or 1, via CMake's `cmakedefine01`), the
+# #ifdef is always true -- so the header is pulled in even when this build has
+# OIDC/curl support fully disabled (WITH_CURL=0, no libcurl-dev installed).
+# Every real use of curl symbols in that file is correctly guarded by
+# `#if WITH_OAUTHBEARER_OIDC`, which is 0 here, so nothing needs a real curl
+# header -- the compiler just needs *a* header to satisfy the #include.
+#
+# CPATH is a standard GCC/Clang search-path env var, so this applies to the
+# cmake/cc invocations rdkafka-sys's build script runs without needing any
+# changes to that build script. See .build-stubs/curl/curl.h for the stub.
+[env]
+CPATH = { value = ".build-stubs", relative = true, force = false }
