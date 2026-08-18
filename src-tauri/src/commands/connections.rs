@@ -229,3 +229,25 @@ pub async fn connection_fetch_messages(
     let connection = kafkaoxide_db::connections::get(&state.pool, &id).await?;
     Ok(state.kafka.fetch_messages(&connection, &topic, &filter, None).await?)
 }
+
+/// Backs the topic detail panel's Partitions tab.
+#[tauri::command]
+pub async fn connection_list_partitions(
+    state: State<'_, AppState>,
+    id: String,
+    topic: String,
+) -> Result<Vec<kafkaoxide_core::PartitionSummary>, CommandError> {
+    let connection = kafkaoxide_db::connections::get(&state.pool, &id).await?;
+    Ok(state.kafka.list_partitions(&connection, &topic, None).await?)
+}
+
+/// Backs the topic detail panel's Config tab.
+#[tauri::command]
+pub async fn connection_describe_topic_config(
+    state: State<'_, AppState>,
+    id: String,
+    topic: String,
+) -> Result<Vec<kafkaoxide_core::ConfigEntry>, CommandError> {
+    let connection = kafkaoxide_db::connections::get(&state.pool, &id).await?;
+    Ok(state.kafka.describe_topic_config(&connection, &topic, None).await?)
+}

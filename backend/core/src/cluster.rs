@@ -25,6 +25,26 @@ pub struct ConsumerGroupSummary {
     pub state: String,
 }
 
+/// One row in the topic detail panel's Partitions tab.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct PartitionSummary {
+    pub id: i32,
+    pub leader: i32,
+    pub replicas: Vec<i32>,
+    pub isr: Vec<i32>,
+    pub low_offset: i64,
+    pub high_offset: i64,
+}
+
+/// One row in the topic detail panel's Config tab.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct ConfigEntry {
+    pub name: String,
+    pub value: Option<String>,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -48,5 +68,29 @@ mod tests {
         let group = ConsumerGroupSummary { group_id: "billing".into(), state: "Stable".into() };
         let json = serde_json::to_string(&group).unwrap();
         assert_eq!(json, r#"{"groupId":"billing","state":"Stable"}"#);
+    }
+
+    #[test]
+    fn partition_summary_serializes_fields_as_camel_case() {
+        let partition = PartitionSummary {
+            id: 0,
+            leader: 1,
+            replicas: vec![1, 2, 3],
+            isr: vec![1, 2],
+            low_offset: 0,
+            high_offset: 100,
+        };
+        let json = serde_json::to_string(&partition).unwrap();
+        assert_eq!(
+            json,
+            r#"{"id":0,"leader":1,"replicas":[1,2,3],"isr":[1,2],"lowOffset":0,"highOffset":100}"#
+        );
+    }
+
+    #[test]
+    fn config_entry_serializes_fields_as_camel_case() {
+        let entry = ConfigEntry { name: "retention.ms".into(), value: Some("604800000".into()) };
+        let json = serde_json::to_string(&entry).unwrap();
+        assert_eq!(json, r#"{"name":"retention.ms","value":"604800000"}"#);
     }
 }

@@ -3,9 +3,11 @@ use base64::engine::general_purpose::STANDARD as BASE64;
 use base64::Engine;
 use error_stack::{Result, ResultExt};
 use kafkaoxide_core::{
-    AppError, BrokerSummary, Connection, ConnectionStatus, ConsumerGroupSummary, MessageFilter,
-    SaslMechanism, SecurityProtocol, TopicMessage, TopicSummary,
+    AppError, BrokerSummary, ConfigEntry, Connection, ConnectionStatus, ConsumerGroupSummary,
+    MessageFilter, PartitionSummary, SaslMechanism, SecurityProtocol, TopicMessage, TopicSummary,
 };
+use rdkafka::admin::{AdminClient, AdminOptions, ResourceSpecifier};
+use rdkafka::client::DefaultClientContext;
 use rdkafka::consumer::{BaseConsumer, Consumer};
 use rdkafka::topic_partition_list::{Offset, TopicPartitionList};
 use rdkafka::{ClientConfig, Message};
@@ -94,6 +96,24 @@ pub trait KafkaClient: Send + Sync {
         filter: &MessageFilter,
         password: Option<&str>,
     ) -> Result<Vec<TopicMessage>, AppError>;
+
+    /// Backs the topic detail panel's Partitions tab: id, leader, replicas,
+    /// ISR, and low/high offsets for every partition.
+    async fn list_partitions(
+        &self,
+        connection: &Connection,
+        topic: &str,
+        password: Option<&str>,
+    ) -> Result<Vec<PartitionSummary>, AppError>;
+
+    /// Backs the topic detail panel's Config tab, via librdkafka's
+    /// DescribeConfigs admin API.
+    async fn describe_topic_config(
+        &self,
+        connection: &Connection,
+        topic: &str,
+        password: Option<&str>,
+    ) -> Result<Vec<ConfigEntry>, AppError>;
 }
 
 async fn run_probe(config: ClientConfig) -> Result<ConnectionStatus, AppError> {
@@ -402,6 +422,92 @@ impl KafkaClient for RdKafkaClient {
         .change_context(AppError::Kafka)
         .attach_printable("fetch_messages task panicked")?
     }
+
+    async fn list_partitions(
+        &self,
+        connection: &Connection,
+        topic: &str,
+        password: Option<&str>,
+    ) -> Result<Vec<PartitionSummary>, AppError> {
+        let config = client_config(connection, password);
+        let topic = topic.to_string();
+        tokio::task::spawn_blocking(move || {
+            let consumer: BaseConsumer = config
+                .create()
+                .change_context(AppError::Kafka)
+                .attach_printable("failed to create kafka consumer")?;
+            let metadata = consumer
+                .fetch_metadata(Some(&topic), METADATA_TIMEOUT)
+                .change_context(AppError::Kafka)
+                .attach_printable_lazy(|| format!("failed to fetch metadata for topic {topic}"))?;
+            let topic_metadata = metadata
+                .topics()
+                .iter()
+                .find(|t| t.name() == topic)
+                .ok_or_else(|| error_stack::Report::new(AppError::NotFound))
+                .attach_printable_lazy(|| format!("topic {topic} not found"))?;
+
+            topic_metadata
+                .partitions()
+                .iter()
+                .map(|partition| {
+                    let (low, high) = consumer
+                        .fetch_watermarks(&topic, partition.id(), METADATA_TIMEOUT)
+                        .change_context(AppError::Kafka)
+                        .attach_printable_lazy(|| {
+                            format!("failed to fetch watermarks for {topic}:{}", partition.id())
+                        })?;
+                    Ok(PartitionSummary {
+                        id: partition.id(),
+                        leader: partition.leader(),
+                        replicas: partition.replicas().to_vec(),
+                        isr: partition.isr().to_vec(),
+                        low_offset: low,
+                        high_offset: high,
+                    })
+                })
+                .collect()
+        })
+        .await
+        .change_context(AppError::Kafka)
+        .attach_printable("list_partitions task panicked")?
+    }
+
+    async fn describe_topic_config(
+        &self,
+        connection: &Connection,
+        topic: &str,
+        password: Option<&str>,
+    ) -> Result<Vec<ConfigEntry>, AppError> {
+        let config = client_config(connection, password);
+        let admin: AdminClient<DefaultClientContext> = config
+            .create()
+            .change_context(AppError::Kafka)
+            .attach_printable("failed to create kafka admin client")?;
+
+        let specifier = ResourceSpecifier::Topic(topic);
+        let options = AdminOptions::new().request_timeout(Some(METADATA_TIMEOUT));
+        let results = admin
+            .describe_configs([&specifier], &options)
+            .await
+            .change_context(AppError::Kafka)
+            .attach_printable_lazy(|| format!("failed to describe config for topic {topic}"))?;
+
+        let resource_result = results
+            .into_iter()
+            .next()
+            .ok_or_else(|| error_stack::Report::new(AppError::Kafka))
+            .attach_printable_lazy(|| format!("no config result returned for topic {topic}"))?;
+        let resource = resource_result
+            .change_context(AppError::Kafka)
+            .attach_printable_lazy(|| format!("kafka rejected describe-config for topic {topic}"))?;
+
+        Ok(resource
+            .entries
+            .into_iter()
+            .map(|entry| ConfigEntry { name: entry.name, value: entry.value })
+            .collect())
+    }
 }
 
 /// Resolves each target partition's offset at `timestamp_ms` via
@@ -535,6 +641,20 @@ mod tests {
         let result = client
             .fetch_messages(&sample_connection(), "orders", &MessageFilter::default(), None)
             .await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn list_partitions_errors_for_a_closed_port() {
+        let client = RdKafkaClient;
+        let result = client.list_partitions(&sample_connection(), "orders", None).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn describe_topic_config_errors_for_a_closed_port() {
+        let client = RdKafkaClient;
+        let result = client.describe_topic_config(&sample_connection(), "orders", None).await;
         assert!(result.is_err());
     }
 
