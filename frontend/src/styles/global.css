@@ -38,17 +38,80 @@ body {
 }
 
 .app-sidebar {
-  width: 260px;
-  min-width: 200px;
-  border-right: 1px solid var(--color-border);
+  height: 100%;
   overflow-y: auto;
   padding: 8px;
 }
 
 .app-main {
-  flex: 1;
+  height: 100%;
   padding: 8px;
   overflow: auto;
+}
+
+.resizable-shell {
+  flex: 1;
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+}
+
+.resizable-pane {
+  min-height: 0;
+  overflow: hidden;
+}
+.resizable-pane--left,
+.resizable-pane--right {
+  flex: 0 0 auto;
+}
+.resizable-pane--middle {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: auto;
+}
+.resizable-pane--right {
+  border-left: 1px solid var(--color-border);
+  padding: 8px;
+  overflow: auto;
+  color: var(--color-fg-muted);
+  font-size: 12px;
+}
+
+.resizable-divider {
+  flex: 0 0 auto;
+  width: 4px;
+  cursor: col-resize;
+  background: transparent;
+  border: none;
+  padding: 0;
+  touch-action: none;
+}
+.resizable-divider:hover,
+.resizable-divider:active {
+  background: var(--color-accent);
+}
+
+@media (max-width: 900px) {
+  .resizable-pane--right {
+    display: none;
+  }
+  .resizable-divider:last-of-type {
+    display: none;
+  }
+}
+
+@media (max-width: 720px) {
+  .resizable-shell {
+    flex-direction: column;
+  }
+  .resizable-pane--left,
+  .resizable-pane--right {
+    width: 100% !important;
+    max-height: 40vh;
+  }
+  .resizable-divider {
+    display: none;
+  }
 }
 
 .status-dot {
@@ -100,13 +163,6 @@ body {
   list-style: none;
   margin: 0;
   padding: 0;
-}
-
-@media (max-width: 720px) {
-  .app-sidebar {
-    width: 180px;
-    min-width: 140px;
-  }
 }
 
 .connection-modal-overlay {

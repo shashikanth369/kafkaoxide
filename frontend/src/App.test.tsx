@@ -18,7 +18,7 @@ describe("App", () => {
     render(<App />);
 
     expect(await screen.findByText("No connections yet. Add one to get started.")).toBeInTheDocument();
-    expect(screen.getByText("Select a topic to browse messages.")).toBeInTheDocument();
+    expect(screen.getByText("Select a cluster, broker, or topic.")).toBeInTheDocument();
     expect(screen.getByLabelText("New tab")).toBeInTheDocument();
   });
 

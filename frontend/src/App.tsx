@@ -8,6 +8,7 @@ import { ConnectionTree } from "./features/connections/ConnectionTree";
 import { ConnectionModal } from "./features/connections/modal/ConnectionModal";
 import { useCreateConnection } from "./features/connections/useConnections";
 import { BottomPanel } from "./features/bottom-panel/BottomPanel";
+import { ResizableShell } from "./features/layout/ResizableShell";
 import "./styles/themes.css";
 import "./styles/global.css";
 
@@ -29,24 +30,30 @@ function AppShell() {
         <ThemeSwitcher />
       </header>
       <div className="app-body">
-        <aside className="app-sidebar">
-          <button type="button" onClick={() => setShowModal(true)}>
-            + New Connection
-          </button>
-          {showModal && (
-            <ConnectionModal
-              onAdd={async (connection) => {
-                await createConnection.mutateAsync(connection);
-                setShowModal(false);
-              }}
-              onCancel={() => setShowModal(false)}
-            />
-          )}
-          <ConnectionTree />
-        </aside>
-        <main className="app-main">
-          <p className="app-main-placeholder">Select a topic to browse messages.</p>
-        </main>
+        <ResizableShell
+          left={
+            <aside className="app-sidebar">
+              <button type="button" onClick={() => setShowModal(true)}>
+                + New Connection
+              </button>
+              {showModal && (
+                <ConnectionModal
+                  onAdd={async (connection) => {
+                    await createConnection.mutateAsync(connection);
+                    setShowModal(false);
+                  }}
+                  onCancel={() => setShowModal(false)}
+                />
+              )}
+              <ConnectionTree />
+            </aside>
+          }
+          middle={
+            <main className="app-main">
+              <p className="app-main-placeholder">Select a cluster, broker, or topic.</p>
+            </main>
+          }
+        />
       </div>
       <BottomPanel />
     </div>
