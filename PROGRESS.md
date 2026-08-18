@@ -55,3 +55,87 @@ build --workspace` failing with the identical pre-existing `pkg-config`
 signature as before (confirming `tauri.conf.json` itself parsed correctly).
 Historical docs under `docs/superpowers/plans/` and `docs/superpowers/specs/`
 were left un-edited since they describe what was true when written.
+
+## New Connection modal (2026-08-18)
+
+Plan: none written up front — spec came as a fully detailed `/goal` message,
+implemented directly via TDD.
+
+Built the full New Connection modal: Properties (General + Zookeeper),
+Security (broker protocol), Advanced (SASL + Schema Registry) tabs, with
+ping buttons (bootstrap servers, Zookeeper host) and a bottom Test/Add/Cancel
+footer, all wired to real backend commands. Backend: extended
+`Connection`/`NewConnection` with the new fields (migration 0002), added
+`ZookeeperClient` (TCP ping) and `KafkaClient::ping_bootstrap`/
+`test_connection`, and reworked `SecretStore` to be keyed by
+`(connection_id, key)` so the 4 Schema Registry secrets can coexist with the
+existing SASL password pattern. Deliberately dropped the old SASL
+username/password fields — the new spec has no username input anywhere,
+which means PLAIN/SCRAM mechanisms can't fully authenticate via
+`test_connection` (documented on the trait method).
+
+62/62 frontend tests, 37/37 backend tests at the time, `tsc`/`vite build`
+clean. `kafkaoxide-app` still unbuildable here (same pkg-config gap) — its
+command wiring was reviewed by hand, and in the process I found (and fixed)
+two missing `use` imports (`KafkaClient`, `SecretStore`) that the *original*
+Phase 0 `connections.rs` was already missing — a latent compile error nobody
+could have caught in this sandbox before now.
+
+## Cluster workspace (2026-08-18)
+
+Plan: `docs/superpowers/plans/2026-08-18-cluster-workspace-roadmap.md` — a
+phase roadmap (not a bite-sized task plan, per writing-plans' Scope Check:
+this spec spans several independent subsystems). All 7 phases complete,
+each its own commit on `feature/initial-mvp`:
+
+1. **Resizable 3-pane shell** — hand-rolled `useResizablePanes` hook
+   (pointer-event delta math, no container measurement needed), persists
+   widths to localStorage, responsive down to a single stacked column.
+2. **Cluster detail panel** — clicking a connection shows its
+   Properties/Security/Advanced tabs inline (reused from the New Connection
+   modal via a new `disabled` prop, implemented as `<fieldset disabled>`
+   wrapping everything but Cluster Name) plus a real Reconnect/Disconnect/
+   Update lifecycle. Added `ConnectionRegistry` (in-memory connected-id set)
+   as the actual "connected" concept the app was missing — `check_status`
+   was always a stateless ping with nothing to gate the tree/panel on.
+   Found and fixed a real bug here: the panel's data-loading `useEffect`
+   depended only on `[connectionId]`, so it never re-ran once the
+   (previously-undefined) connection data actually arrived — stuck
+   permanently on "Loading cluster…" for any non-instant query.
+3. **Brokers/Topics/Consumers tree** — lazy, searchable sub-lists (generic
+   `ResourceCategory` component, one per resource kind) backed by
+   `list_brokers`/`list_topics`/`list_consumer_groups` (rdkafka
+   `fetch_metadata`/`fetch_group_list`).
+4. **Broker detail panel** — id/host/port, folded into the same phase since
+   the spec ties them together directly.
+5. **Topic detail panel shell + Properties** — 4-tab shell
+   (Properties/Data/Partitions/Config); Properties' message count is
+   lazy-fetched only on Refresh click (`count_topic_messages` sums
+   high-low watermark across partitions).
+6. **Data tab (AG Grid)** — added `ag-grid-community`/`ag-grid-react` v36
+   (new Theming API, `themeQuartz` via the `theme` prop). Play/Stop with
+   4 filters (partitions, max/partition, max total, from/to date), backed
+   by `fetch_messages`: resolves start/end offsets per partition (watermarks,
+   or `offsets_for_times` when a date filter is given), computes each
+   partition's budget via pure `partition_limits`/`apply_total_cap`
+   functions (unit-tested independently of any rdkafka I/O), then polls.
+   Bounded/historical snapshot, not a live tail, despite the Play/Stop
+   naming — documented. Right-pane payload viewer: text/JSON toggle:
+   Avro payloads are *detected* (Confluent wire format magic byte + schema
+   id) and labeled, not decoded — no Schema Registry HTTP client exists yet
+   even though the connection model has had a `schemaRegistryEndpoint`
+   field since the New Connection modal phase.
+7. **Partitions & Config tabs** — plain tables (id/leader/replicas/isr/
+   offsets; DescribeConfigs name/value pairs). Caught a real bug here too:
+   `AdminOptions::new()` has no default request timeout, so the
+   closed-port error test took over 60 seconds before I added
+   `.request_timeout(Some(METADATA_TIMEOUT))`.
+
+Final numbers: **175/175 frontend tests, 64/64 backend tests**, `tsc`/
+`vite build` clean throughout. `kafkaoxide-app` remains unbuildable in this
+sandbox (pre-existing pkg-config gap, unrelated to any of this work) — every
+Tauri command added across both feature arcs was reviewed by hand rather
+than compiled. No browser automation tool and no live Kafka broker are
+available here either, so: no real click-through of the UI, and every
+Kafka-reaching backend method's happy path (only the closed-port error path)
+is unverified beyond matching the documented rdkafka API.
