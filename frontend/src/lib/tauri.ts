@@ -112,6 +112,8 @@ export const api = {
   listTopics: (id: string) => invoke<TopicSummary[]>("connection_list_topics", { id }),
   listConsumerGroups: (id: string) =>
     invoke<ConsumerGroupSummary[]>("connection_list_consumer_groups", { id }),
+  countTopicMessages: (id: string, topic: string) =>
+    invoke<number>("connection_count_topic_messages", { id, topic }),
   listTabs: () => invoke<Tab[]>("tab_list"),
   createTab: (name: string) => invoke<Tab>("tab_create", { name }),
   renameTab: (id: string, name: string) => invoke<void>("tab_rename", { id, name }),

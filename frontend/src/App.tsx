@@ -8,6 +8,7 @@ import { ConnectionTree } from "./features/connections/ConnectionTree";
 import { ConnectionModal } from "./features/connections/modal/ConnectionModal";
 import { ClusterDetailPanel } from "./features/connections/ClusterDetailPanel";
 import { BrokerDetailPanel } from "./features/connections/BrokerDetailPanel";
+import { TopicDetailPanel } from "./features/connections/TopicDetailPanel";
 import { useCreateConnection } from "./features/connections/useConnections";
 import { BottomPanel } from "./features/bottom-panel/BottomPanel";
 import { ResizableShell } from "./features/layout/ResizableShell";
@@ -59,7 +60,7 @@ function AppShell() {
                 <BrokerDetailPanel connectionId={selection.connectionId} brokerId={selection.brokerId} />
               )}
               {selection?.type === "topic" && (
-                <p className="app-main-placeholder">Topic "{selection.topicName}" — coming soon.</p>
+                <TopicDetailPanel connectionId={selection.connectionId} topicName={selection.topicName} />
               )}
               {selection?.type === "consumerGroup" && (
                 <p className="app-main-placeholder">Consumer group "{selection.groupId}" — coming soon.</p>

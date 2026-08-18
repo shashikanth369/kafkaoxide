@@ -206,3 +206,14 @@ pub async fn connection_list_consumer_groups(
     let connection = kafkaoxide_db::connections::get(&state.pool, &id).await?;
     Ok(state.kafka.list_consumer_groups(&connection, None).await?)
 }
+
+/// Backs the topic detail panel's Properties > Messages "Refresh" button.
+#[tauri::command]
+pub async fn connection_count_topic_messages(
+    state: State<'_, AppState>,
+    id: String,
+    topic: String,
+) -> Result<u64, CommandError> {
+    let connection = kafkaoxide_db::connections::get(&state.pool, &id).await?;
+    Ok(state.kafka.count_topic_messages(&connection, &topic, None).await?)
+}

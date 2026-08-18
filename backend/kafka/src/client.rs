@@ -62,6 +62,18 @@ pub trait KafkaClient: Send + Sync {
         connection: &Connection,
         password: Option<&str>,
     ) -> Result<Vec<ConsumerGroupSummary>, AppError>;
+
+    /// Sums (high watermark - low watermark) across every partition of the
+    /// topic. Backs the topic detail panel's Properties > Messages section,
+    /// which fetches this lazily only when its Refresh button is clicked —
+    /// never on tab open, since this can be an expensive per-partition call
+    /// on a topic with many partitions.
+    async fn count_topic_messages(
+        &self,
+        connection: &Connection,
+        topic: &str,
+        password: Option<&str>,
+    ) -> Result<u64, AppError>;
 }
 
 async fn run_probe(config: ClientConfig) -> Result<ConnectionStatus, AppError> {
@@ -209,6 +221,47 @@ impl KafkaClient for RdKafkaClient {
         .change_context(AppError::Kafka)
         .attach_printable("list_consumer_groups task panicked")?
     }
+
+    async fn count_topic_messages(
+        &self,
+        connection: &Connection,
+        topic: &str,
+        password: Option<&str>,
+    ) -> Result<u64, AppError> {
+        let config = client_config(connection, password);
+        let topic = topic.to_string();
+        tokio::task::spawn_blocking(move || {
+            let consumer: BaseConsumer = config
+                .create()
+                .change_context(AppError::Kafka)
+                .attach_printable("failed to create kafka consumer")?;
+            let metadata = consumer
+                .fetch_metadata(Some(&topic), METADATA_TIMEOUT)
+                .change_context(AppError::Kafka)
+                .attach_printable_lazy(|| format!("failed to fetch metadata for topic {topic}"))?;
+            let topic_metadata = metadata
+                .topics()
+                .iter()
+                .find(|t| t.name() == topic)
+                .ok_or_else(|| error_stack::Report::new(AppError::NotFound))
+                .attach_printable_lazy(|| format!("topic {topic} not found"))?;
+
+            let mut total: u64 = 0;
+            for partition in topic_metadata.partitions() {
+                let (low, high) = consumer
+                    .fetch_watermarks(&topic, partition.id(), METADATA_TIMEOUT)
+                    .change_context(AppError::Kafka)
+                    .attach_printable_lazy(|| {
+                        format!("failed to fetch watermarks for {topic}:{}", partition.id())
+                    })?;
+                total += (high - low).max(0) as u64;
+            }
+            Ok(total)
+        })
+        .await
+        .change_context(AppError::Kafka)
+        .attach_printable("count_topic_messages task panicked")?
+    }
 }
 
 #[cfg(test)]
@@ -282,6 +335,15 @@ mod tests {
     async fn list_consumer_groups_errors_for_a_closed_port() {
         let client = RdKafkaClient;
         let result = client.list_consumer_groups(&sample_connection(), None).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn count_topic_messages_errors_for_a_closed_port() {
+        let client = RdKafkaClient;
+        let result = client
+            .count_topic_messages(&sample_connection(), "orders", None)
+            .await;
         assert!(result.is_err());
     }
 
