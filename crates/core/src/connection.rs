@@ -1,3 +1,5 @@
+use std::fmt;
+
 use serde::{Deserialize, Serialize};
 use strum::{Display, EnumString};
 
@@ -43,7 +45,7 @@ pub struct Connection {
     pub updated_at: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct NewConnection {
     pub name: String,
@@ -52,6 +54,22 @@ pub struct NewConnection {
     pub sasl_mechanism: Option<SaslMechanism>,
     pub sasl_username: Option<String>,
     pub sasl_password: Option<String>,
+}
+
+impl fmt::Debug for NewConnection {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("NewConnection")
+            .field("name", &self.name)
+            .field("bootstrap_servers", &self.bootstrap_servers)
+            .field("security_protocol", &self.security_protocol)
+            .field("sasl_mechanism", &self.sasl_mechanism)
+            .field("sasl_username", &self.sasl_username)
+            .field(
+                "sasl_password",
+                &self.sasl_password.as_ref().map(|_| "[redacted]"),
+            )
+            .finish()
+    }
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
@@ -107,5 +125,22 @@ mod tests {
         let json = serde_json::to_string(&connection).unwrap();
         assert!(json.contains("\"bootstrapServers\":\"localhost:9092\""));
         assert!(json.contains("\"securityProtocol\":\"PLAINTEXT\""));
+    }
+
+    #[test]
+    fn new_connection_debug_output_never_contains_the_real_password() {
+        let new_connection = NewConnection {
+            name: "Local".into(),
+            bootstrap_servers: "localhost:9092".into(),
+            security_protocol: SecurityProtocol::SaslSsl,
+            sasl_mechanism: Some(SaslMechanism::Plain),
+            sasl_username: Some("alice".into()),
+            sasl_password: Some("super-secret-value".into()),
+        };
+
+        let debug_output = format!("{:?}", new_connection);
+
+        assert!(!debug_output.contains("super-secret-value"));
+        assert!(debug_output.contains("[redacted]"));
     }
 }
