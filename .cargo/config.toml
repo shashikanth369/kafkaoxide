@@ -1,18 +1,28 @@
 # Build-time workaround for a bug in the vendored librdkafka source shipped by
 # rdkafka-sys 4.10.0+2.12.1 (pulled in by kafkaoxide-kafka's rdkafka dependency
-# with the `cmake-build` feature).
+# with the `cmake-build` feature). Full story in .build-stubs/curl/curl.h --
+# read that before touching this.
 #
-# src/rdkafka_conf.c includes <curl/curl.h> behind `#ifdef WITH_OAUTHBEARER_OIDC`
-# instead of `#if WITH_OAUTHBEARER_OIDC`. Because the generated config.h always
-# defines WITH_OAUTHBEARER_OIDC (to 0 or 1, via CMake's `cmakedefine01`), the
-# #ifdef is always true -- so the header is pulled in even when this build has
-# OIDC/curl support fully disabled (WITH_CURL=0, no libcurl-dev installed).
-# Every real use of curl symbols in that file is correctly guarded by
-# `#if WITH_OAUTHBEARER_OIDC`, which is 0 here, so nothing needs a real curl
-# header -- the compiler just needs *a* header to satisfy the #include.
+# Short version: src/rdkafka_conf.c includes <curl/curl.h> unconditionally in
+# practice (an `#ifdef` that should be `#if`), even when curl/OIDC support is
+# fully disabled and no libcurl-dev is installed. CPATH points the compiler
+# at a directory containing a *forwarding* shim curl/curl.h (using
+# `#include_next`), not a plain empty stub: if this workspace is ever built
+# on a machine that has a real curl/curl.h later in the include path (e.g.
+# libcurl-dev installed, or the `ssl`+`curl` rdkafka features enabled), the
+# shim steps aside and the real header is used, so it cannot silently shadow
+# a real libcurl install.
 #
-# CPATH is a standard GCC/Clang search-path env var, so this applies to the
-# cmake/cc invocations rdkafka-sys's build script runs without needing any
-# changes to that build script. See .build-stubs/curl/curl.h for the stub.
+# We looked at `-idirafter` (searched after system dirs, so it could never
+# take priority over a real header at all) as an alternative to CPATH, which
+# would avoid needing the forwarding trick above. It didn't pan out: cargo's
+# `{ value = ..., relative = true }` path resolution for [env] treats the
+# *entire* value as a path and prepends the config dir to it, so it cannot
+# express a value like "-idirafter <abspath>" (composed flag + path) --
+# tested, and it corrupts the flag into garbage. CFLAGS/CXXFLAGS are also
+# workspace-global, so routing this through them would leak an extra
+# `-idirafter` flag into every C/C++ build in the workspace (e.g. libz-sys),
+# not just rdkafka-sys's. CPATH + the forwarding shim below gets the same
+# safety property (never shadows a real header) without either problem.
 [env]
 CPATH = { value = ".build-stubs", relative = true, force = false }
