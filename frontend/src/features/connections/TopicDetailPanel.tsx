@@ -1,5 +1,7 @@
 import { useState } from "react";
+import { ConfigTab } from "./ConfigTab";
 import { DataTab } from "./DataTab";
+import { PartitionsTab } from "./PartitionsTab";
 import { TopicPropertiesTab } from "./TopicPropertiesTab";
 
 export interface TopicDetailPanelProps {
@@ -45,8 +47,8 @@ export function TopicDetailPanel({ connectionId, topicName }: TopicDetailPanelPr
           <TopicPropertiesTab connectionId={connectionId} topicName={topicName} />
         )}
         {activeTab === "data" && <DataTab connectionId={connectionId} topicName={topicName} />}
-        {activeTab === "partitions" && <p className="app-main-placeholder">Partition list coming soon.</p>}
-        {activeTab === "config" && <p className="app-main-placeholder">Topic config coming soon.</p>}
+        {activeTab === "partitions" && <PartitionsTab connectionId={connectionId} topicName={topicName} />}
+        {activeTab === "config" && <ConfigTab connectionId={connectionId} topicName={topicName} />}
       </div>
     </div>
   );

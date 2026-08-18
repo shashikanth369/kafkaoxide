@@ -41,3 +41,19 @@ export function useFetchMessages() {
     mutationFn: ({ connectionId, topic, filter }) => api.fetchMessages(connectionId, topic, filter),
   });
 }
+
+/** Backs the topic detail panel's Partitions tab. */
+export function usePartitions(connectionId: string, topic: string) {
+  return useQuery({
+    queryKey: ["partitions", connectionId, topic],
+    queryFn: () => api.listPartitions(connectionId, topic),
+  });
+}
+
+/** Backs the topic detail panel's Config tab. */
+export function useTopicConfig(connectionId: string, topic: string) {
+  return useQuery({
+    queryKey: ["topic-config", connectionId, topic],
+    queryFn: () => api.describeTopicConfig(connectionId, topic),
+  });
+}

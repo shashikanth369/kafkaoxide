@@ -381,6 +381,22 @@ body {
   margin: 0;
 }
 
+.topic-detail-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.topic-detail-table th,
+.topic-detail-table td {
+  text-align: left;
+  padding: 5px 8px;
+  border-bottom: 1px solid var(--color-border);
+}
+.topic-detail-table th {
+  color: var(--color-fg-muted);
+  font-weight: 500;
+}
+
 .connection-modal-overlay {
   position: fixed;
   inset: 0;

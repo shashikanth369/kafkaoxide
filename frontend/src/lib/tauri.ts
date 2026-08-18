@@ -90,6 +90,20 @@ export interface ConsumerGroupSummary {
   state: string;
 }
 
+export interface PartitionSummary {
+  id: number;
+  leader: number;
+  replicas: number[];
+  isr: number[];
+  lowOffset: number;
+  highOffset: number;
+}
+
+export interface ConfigEntry {
+  name: string;
+  value: string | null;
+}
+
 /** All fields optional — an all-undefined filter pulls every message. */
 export interface MessageFilter {
   partitions: number[] | null;
@@ -133,6 +147,10 @@ export const api = {
     invoke<number>("connection_count_topic_messages", { id, topic }),
   fetchMessages: (id: string, topic: string, filter: MessageFilter) =>
     invoke<TopicMessage[]>("connection_fetch_messages", { id, topic, filter }),
+  listPartitions: (id: string, topic: string) =>
+    invoke<PartitionSummary[]>("connection_list_partitions", { id, topic }),
+  describeTopicConfig: (id: string, topic: string) =>
+    invoke<ConfigEntry[]>("connection_describe_topic_config", { id, topic }),
   listTabs: () => invoke<Tab[]>("tab_list"),
   createTab: (name: string) => invoke<Tab>("tab_create", { name }),
   renameTab: (id: string, name: string) => invoke<void>("tab_rename", { id, name }),
