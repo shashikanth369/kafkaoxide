@@ -1,0 +1,47 @@
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+
+mod commands;
+mod logging;
+mod state;
+
+use state::AppState;
+use std::sync::Arc;
+use tauri::Manager;
+
+fn main() {
+    tauri::Builder::default()
+        .setup(|app| {
+            let handle = app.handle().clone();
+            tauri::async_runtime::block_on(async move {
+                let data_dir = handle.path().app_data_dir().expect("app data dir");
+                std::fs::create_dir_all(&data_dir).expect("create app data dir");
+                let db_path = data_dir.join("kafkaoxide.sqlite");
+                let database_url = format!("sqlite://{}?mode=rwc", db_path.display());
+                let pool = kafkaoxide_db::init_pool(&database_url)
+                    .await
+                    .expect("failed to initialize database");
+
+                handle.manage(AppState {
+                    pool,
+                    kafka: Arc::new(kafkaoxide_kafka::RdKafkaClient),
+                    secrets: Arc::new(kafkaoxide_secrets::KeyringSecretStore),
+                });
+
+                logging::emit_log(&handle, "info", "Application started");
+            });
+            Ok(())
+        })
+        .invoke_handler(tauri::generate_handler![
+            commands::connections::connection_list,
+            commands::connections::connection_create,
+            commands::connections::connection_update,
+            commands::connections::connection_delete,
+            commands::connections::connection_check_status,
+            commands::tabs::tab_list,
+            commands::tabs::tab_create,
+            commands::tabs::tab_rename,
+            commands::tabs::tab_delete,
+        ])
+        .run(tauri::generate_context!())
+        .expect("error while running tauri application");
+}

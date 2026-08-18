@@ -5,6 +5,7 @@ members = [
   "crates/db",
   "crates/secrets",
   "crates/kafka",
+  "src-tauri",
 ]
 
 [workspace.dependencies]
