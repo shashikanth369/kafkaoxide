@@ -3,17 +3,19 @@ use base64::engine::general_purpose::STANDARD as BASE64;
 use base64::Engine;
 use error_stack::{Result, ResultExt};
 use kafkaoxide_core::{
-    AppError, BrokerSummary, ConfigEntry, Connection, ConnectionStatus, ConsumerGroupSummary,
-    MessageFilter, PartitionSummary, SaslMechanism, SecurityProtocol, TopicMessage, TopicSummary,
+    AppError, BrokerSummary, ConfigEntry, Connection, ConnectionStatus, ConsumerGroupLag,
+    ConsumerGroupSummary, MessageFilter, PartitionLag, PartitionSummary, SaslMechanism,
+    SecurityProtocol, TopicMessage, TopicSummary,
 };
 use rdkafka::admin::{AdminClient, AdminOptions, ResourceSpecifier};
 use rdkafka::client::DefaultClientContext;
 use rdkafka::consumer::{BaseConsumer, Consumer};
 use rdkafka::topic_partition_list::{Offset, TopicPartitionList};
 use rdkafka::{ClientConfig, Message};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 use std::time::Duration;
 
+use crate::assignment::decode_consumer_protocol_assignment;
 use crate::config::{build_client_config, client_config};
 use crate::messages::{apply_total_cap, partition_limits};
 
@@ -114,6 +116,19 @@ pub trait KafkaClient: Send + Sync {
         topic: &str,
         password: Option<&str>,
     ) -> Result<Vec<ConfigEntry>, AppError>;
+
+    /// Backs the consumer group detail panel's "Refresh" button. Decodes
+    /// each member's partition assignment (see `crate::assignment`), then
+    /// fetches committed offsets (via a throwaway consumer scoped to this
+    /// group id — never subscribed/polled, so it cannot join the group or
+    /// disturb the real consumers' rebalance) and log-end offsets for
+    /// exactly those partitions.
+    async fn fetch_consumer_group_lag(
+        &self,
+        connection: &Connection,
+        group_id: &str,
+        password: Option<&str>,
+    ) -> Result<ConsumerGroupLag, AppError>;
 }
 
 async fn run_probe(config: ClientConfig) -> Result<ConnectionStatus, AppError> {
@@ -510,6 +525,121 @@ impl KafkaClient for RdKafkaClient {
             .map(|entry| ConfigEntry { name: entry.name, value: entry.value })
             .collect())
     }
+
+    async fn fetch_consumer_group_lag(
+        &self,
+        connection: &Connection,
+        group_id: &str,
+        password: Option<&str>,
+    ) -> Result<ConsumerGroupLag, AppError> {
+        let config = client_config(connection, password);
+        let mut group_config = client_config(connection, password);
+        let group_id = group_id.to_string();
+        tokio::task::spawn_blocking(move || {
+            let consumer: BaseConsumer = config
+                .create()
+                .change_context(AppError::Kafka)
+                .attach_printable("failed to create kafka consumer")?;
+            let groups = consumer
+                .fetch_group_list(Some(&group_id), METADATA_TIMEOUT)
+                .change_context(AppError::Kafka)
+                .attach_printable_lazy(|| format!("failed to fetch group list for {group_id}"))?;
+            let group = groups
+                .groups()
+                .iter()
+                .find(|g| g.name() == group_id)
+                .ok_or_else(|| error_stack::Report::new(AppError::NotFound))
+                .attach_printable_lazy(|| format!("group {group_id} not found"))?;
+
+            let mut owners: HashMap<(String, i32), (String, String)> = HashMap::new();
+            let mut decode_failures = 0usize;
+            let mut decode_attempts = 0usize;
+            for member in group.members() {
+                if group.protocol_type() != "consumer" {
+                    continue;
+                }
+                let Some(assignment_bytes) = member.assignment() else {
+                    continue;
+                };
+                decode_attempts += 1;
+                match decode_consumer_protocol_assignment(assignment_bytes) {
+                    Ok(partitions) => {
+                        for (topic, partition) in partitions {
+                            owners.insert(
+                                (topic, partition),
+                                (member.client_id().to_string(), member.client_host().to_string()),
+                            );
+                        }
+                    }
+                    Err(_) => decode_failures += 1,
+                }
+            }
+
+            if decode_attempts > 0 && decode_failures == decode_attempts {
+                return Err(error_stack::Report::new(AppError::Kafka)).attach_printable_lazy(|| {
+                    format!("could not determine partition assignment for group {group_id}")
+                });
+            }
+
+            if owners.is_empty() {
+                return Ok(ConsumerGroupLag {
+                    state: group.state().to_string(),
+                    partitions: Vec::new(),
+                });
+            }
+
+            let mut tpl = TopicPartitionList::new();
+            for (topic, partition) in owners.keys() {
+                tpl.add_partition(topic, *partition);
+            }
+
+            group_config.set("group.id", &group_id);
+            let group_consumer: BaseConsumer = group_config
+                .create()
+                .change_context(AppError::Kafka)
+                .attach_printable("failed to create group-scoped kafka consumer")?;
+            let committed = group_consumer
+                .committed_offsets(tpl, METADATA_TIMEOUT)
+                .change_context(AppError::Kafka)
+                .attach_printable_lazy(|| format!("failed to fetch committed offsets for {group_id}"))?;
+
+            let mut partitions = Vec::new();
+            for element in committed.elements() {
+                let topic = element.topic().to_string();
+                let partition = element.partition();
+                let current_offset = element.offset().to_raw().filter(|&o| o >= 0);
+
+                let (_low, high) = consumer
+                    .fetch_watermarks(&topic, partition, METADATA_TIMEOUT)
+                    .change_context(AppError::Kafka)
+                    .attach_printable_lazy(|| {
+                        format!("failed to fetch watermarks for {topic}:{partition}")
+                    })?;
+
+                let lag = current_offset.map(|current| (high - current).max(0));
+                let (client_id, client_host) = owners
+                    .get(&(topic.clone(), partition))
+                    .cloned()
+                    .map(|(id, host)| (Some(id), Some(host)))
+                    .unwrap_or((None, None));
+
+                partitions.push(PartitionLag {
+                    topic,
+                    partition,
+                    current_offset,
+                    log_end_offset: high,
+                    lag,
+                    client_id,
+                    client_host,
+                });
+            }
+
+            Ok(ConsumerGroupLag { state: group.state().to_string(), partitions })
+        })
+        .await
+        .change_context(AppError::Kafka)
+        .attach_printable("fetch_consumer_group_lag task panicked")?
+    }
 }
 
 /// Resolves each target partition's offset at `timestamp_ms` via
@@ -657,6 +787,15 @@ mod tests {
     async fn describe_topic_config_errors_for_a_closed_port() {
         let client = RdKafkaClient;
         let result = client.describe_topic_config(&sample_connection(), "orders", None).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn fetch_consumer_group_lag_errors_for_a_closed_port() {
+        let client = RdKafkaClient;
+        let result = client
+            .fetch_consumer_group_lag(&sample_connection(), "billing-service", None)
+            .await;
         assert!(result.is_err());
     }
 
