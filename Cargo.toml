@@ -1,0 +1,19 @@
+[workspace]
+resolver = "2"
+members = [
+  "crates/core",
+]
+
+[workspace.dependencies]
+error-stack = "0.5"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["rt", "rt-multi-thread", "macros", "sync", "time"] }
+uuid = { version = "1", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+strum = { version = "0.26", features = ["derive"] }
+async-trait = "0.1"
+kafkaoxide-core = { path = "crates/core" }
+kafkaoxide-db = { path = "crates/db" }
+kafkaoxide-secrets = { path = "crates/secrets" }
+kafkaoxide-kafka = { path = "crates/kafka" }
