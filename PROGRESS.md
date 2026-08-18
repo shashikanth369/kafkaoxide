@@ -5,7 +5,7 @@ Worktree path: `.claude/worktrees/phase0-foundation`
 Plan: `docs/superpowers/plans/2026-08-18-phase0-foundation.md`
 Executing via: superpowers:subagent-driven-development (implementer → spec review → code-quality review per task)
 
-## Status: Task 9 fixed and approved. Proceeding through Task 10-12.
+## Status: Phase 0 complete. All 12 tasks implemented, reviewed, and verified.
 
 ## Done (implemented, spec-reviewed ✅, code-quality reviewed)
 
@@ -24,9 +24,14 @@ Executing via: superpowers:subagent-driven-development (implementer → spec rev
 - **Task 10** — Bottom panel (Logs tool). Approved (verified independently: 23/23 tests, matches plan's file list exactly).
 - **Task 11** — Wired the full app shell (`App.tsx`, `global.css`) and fixed both deferred Task 8 (tabs) issues in the same task: `useTabsStore` now catches/surfaces mutation errors (`role="alert"`, cleared on next success), `TabBar`'s `role="tab"` divs now have `tabIndex`+Enter/Space keyboard activation with a guard so it doesn't hijack the rename `<input>`'s own keystrokes. `loadTabs()` is now actually called on mount (was a real gap — nothing called it before). Independent review: **Approved with minor notes** (27/27 tests, tsc clean; one minor deferred UX gap — `error` in `useTabsStore` isn't cleared when the user switches tabs instead of retrying a failed rename, so a stale alert can linger — not a blocker, worth a quick follow-up sometime).
 
-## Not started
+- **Task 12** — Full workspace verification, all steps run for real:
+  - `cargo test --workspace --exclude kafkaoxide-app`: **24/24 tests pass** (5 core + 11 db + 4 kafka + 4 secrets).
+  - `cargo build -p kafkaoxide-app`: fails as expected/documented — `libdbus-sys`'s build script can't find `pkg-config`. Zero Rust compiler errors; purely the missing system-package gap noted since Task 5.
+  - `npm run test`: **27/27 tests pass** across 8 files.
+  - `npm run build`: clean — `tsc` reports no type errors, Vite bundles successfully (`dist/index.html` + JS/CSS assets, ~61KB gzipped JS).
+  - `npm run tauri dev` manual smoke test: **not run** — same missing `pkg-config`/webkit2gtk-dev system packages as Step 2, this sandbox has no passwordless sudo to install them.
 
-- **Task 12** — Full workspace verification: `cargo test --workspace`, `npm run test`/`build`, and (only if system packages get installed) a live `cargo build -p kafkaoxide-app` + manual `npm run tauri dev` smoke test.
+Phase 0 is functionally complete and verified everywhere this sandbox allows. The only unverified piece is the actual Tauri binary build/run, which requires system packages this environment doesn't have installed.
 
 ## Environment notes carried forward
 
