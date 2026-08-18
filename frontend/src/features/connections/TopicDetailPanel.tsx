@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { DataTab } from "./DataTab";
 import { TopicPropertiesTab } from "./TopicPropertiesTab";
 
 export interface TopicDetailPanelProps {
@@ -43,7 +44,7 @@ export function TopicDetailPanel({ connectionId, topicName }: TopicDetailPanelPr
         {activeTab === "properties" && (
           <TopicPropertiesTab connectionId={connectionId} topicName={topicName} />
         )}
-        {activeTab === "data" && <p className="app-main-placeholder">Message browser coming soon.</p>}
+        {activeTab === "data" && <DataTab connectionId={connectionId} topicName={topicName} />}
         {activeTab === "partitions" && <p className="app-main-placeholder">Partition list coming soon.</p>}
         {activeTab === "config" && <p className="app-main-placeholder">Topic config coming soon.</p>}
       </div>

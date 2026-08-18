@@ -90,6 +90,23 @@ export interface ConsumerGroupSummary {
   state: string;
 }
 
+/** All fields optional — an all-undefined filter pulls every message. */
+export interface MessageFilter {
+  partitions: number[] | null;
+  maxMessagesPerPartition: number | null;
+  maxTotalMessages: number | null;
+  fromTimestampMs: number | null;
+  toTimestampMs: number | null;
+}
+
+export interface TopicMessage {
+  partition: number;
+  offset: number;
+  timestampMs: number | null;
+  key: string | null;
+  payloadBase64: string;
+}
+
 export const api = {
   listConnections: () => invoke<Connection[]>("connection_list"),
   createConnection: (newConnection: NewConnection) =>
@@ -114,6 +131,8 @@ export const api = {
     invoke<ConsumerGroupSummary[]>("connection_list_consumer_groups", { id }),
   countTopicMessages: (id: string, topic: string) =>
     invoke<number>("connection_count_topic_messages", { id, topic }),
+  fetchMessages: (id: string, topic: string, filter: MessageFilter) =>
+    invoke<TopicMessage[]>("connection_fetch_messages", { id, topic, filter }),
   listTabs: () => invoke<Tab[]>("tab_list"),
   createTab: (name: string) => invoke<Tab>("tab_create", { name }),
   renameTab: (id: string, name: string) => invoke<void>("tab_rename", { id, name }),

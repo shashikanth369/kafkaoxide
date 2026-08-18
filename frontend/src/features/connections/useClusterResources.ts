@@ -1,5 +1,5 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { api } from "../../lib/tauri";
+import { api, MessageFilter, TopicMessage } from "../../lib/tauri";
 
 /** Backs the tree's "Brokers" sub-list — fetched lazily, only once the category is expanded. */
 export function useBrokers(connectionId: string, enabled: boolean) {
@@ -32,5 +32,12 @@ export function useConsumerGroups(connectionId: string, enabled: boolean) {
 export function useCountTopicMessages() {
   return useMutation<number, Error, { connectionId: string; topic: string }>({
     mutationFn: ({ connectionId, topic }) => api.countTopicMessages(connectionId, topic),
+  });
+}
+
+/** Backs the topic Data tab's Play button. */
+export function useFetchMessages() {
+  return useMutation<TopicMessage[], Error, { connectionId: string; topic: string; filter: MessageFilter }>({
+    mutationFn: ({ connectionId, topic, filter }) => api.fetchMessages(connectionId, topic, filter),
   });
 }

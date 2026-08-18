@@ -291,6 +291,96 @@ body {
   cursor: not-allowed;
 }
 
+.data-tab {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+.data-tab-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.data-tab-filters label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--color-fg-muted);
+}
+.data-tab-filters input {
+  font: inherit;
+  color: var(--color-fg);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  padding: 5px 8px;
+  width: 160px;
+}
+.data-tab-controls {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.data-tab-controls button {
+  padding: 6px 14px;
+  border-radius: 4px;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-elevated);
+  color: var(--color-fg);
+  cursor: pointer;
+}
+.data-tab-controls button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.data-tab-grid {
+  flex: 1;
+  min-height: 320px;
+}
+
+.message-payload-viewer {
+  font-size: 12px;
+}
+.message-payload-meta {
+  color: var(--color-fg-muted);
+  margin: 0 0 8px;
+}
+.message-payload-avro-banner {
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  padding: 6px 8px;
+  margin: 0 0 8px;
+  color: var(--color-fg-muted);
+}
+.message-payload-toggle {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+.message-payload-toggle button {
+  padding: 3px 10px;
+  border-radius: 4px;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-elevated);
+  color: var(--color-fg-muted);
+  cursor: pointer;
+  font-size: 12px;
+}
+.message-payload-toggle-button--active {
+  color: var(--color-fg) !important;
+  border-color: var(--color-accent) !important;
+}
+.message-payload-body {
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: ui-monospace, "SF Mono", Consolas, monospace;
+  font-size: 12px;
+  margin: 0;
+}
+
 .connection-modal-overlay {
   position: fixed;
   inset: 0;

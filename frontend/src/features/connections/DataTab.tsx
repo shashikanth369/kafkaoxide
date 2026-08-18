@@ -1,0 +1,149 @@
+import { useRef, useState } from "react";
+import { AgGridReact } from "ag-grid-react";
+import { AllCommunityModule, ColDef, ModuleRegistry, themeQuartz, ValueFormatterParams } from "ag-grid-community";
+import { TopicMessage } from "../../lib/tauri";
+import { useMessageViewerStore } from "../workspace/useMessageViewerStore";
+import { emptyFilterForm, FilterFormState, toMessageFilter } from "./dataFilters";
+import { useFetchMessages } from "./useClusterResources";
+
+ModuleRegistry.registerModules([AllCommunityModule]);
+
+function formatTimestamp(params: ValueFormatterParams<TopicMessage, number | null>): string {
+  return params.value ? new Date(params.value).toISOString() : "";
+}
+
+const COLUMN_DEFS: ColDef<TopicMessage>[] = [
+  { field: "partition", headerName: "Partition" },
+  { field: "offset", headerName: "Offset" },
+  { field: "timestampMs", headerName: "Timestamp", valueFormatter: formatTimestamp },
+  { field: "key", headerName: "Key" },
+];
+
+const DEFAULT_COL_DEF: ColDef<TopicMessage> = {
+  sortable: true,
+  filter: true,
+  resizable: true,
+};
+
+export interface DataTabProps {
+  connectionId: string;
+  topicName: string;
+}
+
+/**
+ * Play pulls a bounded snapshot of message metadata applying the filters
+ * below (an all-blank filter pulls everything). Stop doesn't cancel the
+ * in-flight backend fetch (no cancellation plumbing there) — it just
+ * discards the result when it eventually arrives, so the grid never
+ * updates with data the user already asked to stop waiting for.
+ */
+export function DataTab({ connectionId, topicName }: DataTabProps) {
+  const [form, setForm] = useState<FilterFormState>(emptyFilterForm);
+  const [messages, setMessages] = useState<TopicMessage[]>([]);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const fetchMessages = useFetchMessages();
+  const viewMessage = useMessageViewerStore((s) => s.viewMessage);
+  const stoppedRef = useRef(false);
+
+  function updateForm(patch: Partial<FilterFormState>) {
+    setForm((prev) => ({ ...prev, ...patch }));
+  }
+
+  async function handlePlay() {
+    setError(null);
+    setIsPlaying(true);
+    stoppedRef.current = false;
+    try {
+      const result = await fetchMessages.mutateAsync({
+        connectionId,
+        topic: topicName,
+        filter: toMessageFilter(form),
+      });
+      if (!stoppedRef.current) {
+        setMessages(result);
+      }
+    } catch (err) {
+      if (!stoppedRef.current) {
+        setError(err instanceof Error ? err.message : "Failed to fetch messages");
+      }
+    } finally {
+      setIsPlaying(false);
+    }
+  }
+
+  function handleStop() {
+    stoppedRef.current = true;
+    setIsPlaying(false);
+  }
+
+  return (
+    <div className="data-tab">
+      <div className="data-tab-filters">
+        <label>
+          Max messages per partition
+          <input
+            inputMode="numeric"
+            value={form.maxMessagesPerPartition}
+            onChange={(e) => updateForm({ maxMessagesPerPartition: e.target.value })}
+          />
+        </label>
+        <label>
+          Total max messages
+          <input
+            inputMode="numeric"
+            value={form.maxTotalMessages}
+            onChange={(e) => updateForm({ maxTotalMessages: e.target.value })}
+          />
+        </label>
+        <label>
+          Partition filter
+          <input
+            value={form.partitions}
+            onChange={(e) => updateForm({ partitions: e.target.value })}
+            placeholder="e.g. 0, 1, 2"
+          />
+        </label>
+        <label>
+          From
+          <input
+            type="datetime-local"
+            value={form.fromDate}
+            onChange={(e) => updateForm({ fromDate: e.target.value })}
+          />
+        </label>
+        <label>
+          To
+          <input type="datetime-local" value={form.toDate} onChange={(e) => updateForm({ toDate: e.target.value })} />
+        </label>
+      </div>
+
+      <div className="data-tab-controls">
+        <button type="button" aria-label="Play" onClick={handlePlay} disabled={isPlaying}>
+          ▶ Play
+        </button>
+        <button type="button" aria-label="Stop" onClick={handleStop} disabled={!isPlaying}>
+          ■ Stop
+        </button>
+      </div>
+
+      {error && (
+        <p role="alert" className="connection-modal-error">
+          {error}
+        </p>
+      )}
+
+      <div className="data-tab-grid" data-testid="message-grid">
+        <AgGridReact<TopicMessage>
+          theme={themeQuartz}
+          rowData={messages}
+          columnDefs={COLUMN_DEFS}
+          defaultColDef={DEFAULT_COL_DEF}
+          onRowClicked={(event) => {
+            if (event.data) viewMessage(event.data);
+          }}
+        />
+      </div>
+    </div>
+  );
+}
