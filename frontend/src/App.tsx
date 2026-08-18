@@ -10,6 +10,7 @@ import { ClusterDetailPanel } from "./features/connections/ClusterDetailPanel";
 import { BrokerDetailPanel } from "./features/connections/BrokerDetailPanel";
 import { TopicDetailPanel } from "./features/connections/TopicDetailPanel";
 import { MessagePayloadViewer } from "./features/connections/MessagePayloadViewer";
+import { ConsumerGroupDetailPanel } from "./features/connections/ConsumerGroupDetailPanel";
 import { useCreateConnection } from "./features/connections/useConnections";
 import { BottomPanel } from "./features/bottom-panel/BottomPanel";
 import { ResizableShell } from "./features/layout/ResizableShell";
@@ -64,7 +65,7 @@ function AppShell() {
                 <TopicDetailPanel connectionId={selection.connectionId} topicName={selection.topicName} />
               )}
               {selection?.type === "consumerGroup" && (
-                <p className="app-main-placeholder">Consumer group "{selection.groupId}" — coming soon.</p>
+                <ConsumerGroupDetailPanel connectionId={selection.connectionId} groupId={selection.groupId} />
               )}
               {!selection && <p className="app-main-placeholder">Select a cluster, broker, or topic.</p>}
             </main>
