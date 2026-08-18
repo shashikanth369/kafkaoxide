@@ -1,19 +1,9 @@
 import { useState } from "react";
 import { NewConnection } from "../../../lib/tauri";
 import { useTestConnection } from "../useConnections";
-import { AdvancedTab } from "./AdvancedTab";
+import { ConnectionTabId, ConnectionTabsView } from "./ConnectionTabsView";
 import { ConnectionDraft, emptyDraft, toNewConnection, validateDraft } from "./draft";
 import { PingResult } from "./PingResult";
-import { PropertiesTab } from "./PropertiesTab";
-import { SecurityTab } from "./SecurityTab";
-
-type ModalTabId = "properties" | "security" | "advanced";
-
-const MODAL_TABS: { id: ModalTabId; label: string }[] = [
-  { id: "properties", label: "Properties" },
-  { id: "security", label: "Security" },
-  { id: "advanced", label: "Advanced" },
-];
 
 export interface ConnectionModalProps {
   onAdd: (connection: NewConnection) => void | Promise<void>;
@@ -21,7 +11,7 @@ export interface ConnectionModalProps {
 }
 
 export function ConnectionModal({ onAdd, onCancel }: ConnectionModalProps) {
-  const [activeTab, setActiveTab] = useState<ModalTabId>("properties");
+  const [activeTab, setActiveTab] = useState<ConnectionTabId>("properties");
   const [draft, setDraft] = useState<ConnectionDraft>(emptyDraft);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [isAdding, setIsAdding] = useState(false);
@@ -67,26 +57,7 @@ export function ConnectionModal({ onAdd, onCancel }: ConnectionModalProps) {
           <h2>New Connection</h2>
         </header>
 
-        <div className="connection-modal-tabs" role="tablist">
-          {MODAL_TABS.map((tab) => (
-            <button
-              key={tab.id}
-              type="button"
-              role="tab"
-              aria-selected={activeTab === tab.id}
-              className={`connection-modal-tab${activeTab === tab.id ? " connection-modal-tab--active" : ""}`}
-              onClick={() => setActiveTab(tab.id)}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-
-        <div className="connection-modal-body">
-          {activeTab === "properties" && <PropertiesTab draft={draft} onChange={updateDraft} />}
-          {activeTab === "security" && <SecurityTab draft={draft} onChange={updateDraft} />}
-          {activeTab === "advanced" && <AdvancedTab draft={draft} onChange={updateDraft} />}
-        </div>
+        <ConnectionTabsView activeTab={activeTab} onTabChange={setActiveTab} draft={draft} onChange={updateDraft} />
 
         {validationError && (
           <p role="alert" className="connection-modal-error">

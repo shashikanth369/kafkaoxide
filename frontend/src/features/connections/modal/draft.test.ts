@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { emptyDraft, toNewConnection, validateDraft } from "./draft";
+import type { Connection } from "../../../lib/tauri";
+import { connectionToDraft, draftsEqual, emptyDraft, toNewConnection, validateDraft } from "./draft";
 
 describe("emptyDraft", () => {
   it("defaults to plaintext with zookeeper disabled and no sasl mechanism", () => {
@@ -141,5 +142,102 @@ describe("toNewConnection", () => {
     expect(result.schemaRegistryKeystoreLocation).toBe("/etc/ks.jks");
     expect(result.schemaRegistryKeystorePassword).toBe("ks-secret");
     expect(result.schemaRegistryKeystoreKeyPassword).toBe("ks-key-secret");
+  });
+});
+
+function sampleConnection(overrides: Partial<Connection> = {}): Connection {
+  return {
+    id: "conn-1",
+    name: "Local Kafka",
+    bootstrapServers: "localhost:9092",
+    kafkaVersion: "2.8",
+    zookeeperEnabled: true,
+    zookeeperHost: "zk.local",
+    zookeeperPort: 2181,
+    zookeeperChrootPath: "/kafka",
+    securityProtocol: "SASL_SSL",
+    saslMechanism: "SCRAM-SHA-512",
+    saslOauthUrl: "https://idp.example.com/token",
+    schemaRegistryEndpoint: "https://schema-registry.local",
+    schemaRegistryTrustStoreLocation: "/etc/ts.jks",
+    schemaRegistryKeystoreLocation: "/etc/ks.jks",
+    createdAt: "2026-08-18T00:00:00Z",
+    updatedAt: "2026-08-18T00:00:00Z",
+    ...overrides,
+  };
+}
+
+describe("connectionToDraft", () => {
+  it("carries every non-secret field from the connection into the draft", () => {
+    const draft = connectionToDraft(sampleConnection());
+
+    expect(draft.name).toBe("Local Kafka");
+    expect(draft.bootstrapServers).toBe("localhost:9092");
+    expect(draft.kafkaVersion).toBe("2.8");
+    expect(draft.zookeeperEnabled).toBe(true);
+    expect(draft.zookeeperHost).toBe("zk.local");
+    expect(draft.zookeeperPort).toBe("2181");
+    expect(draft.zookeeperChrootPath).toBe("/kafka");
+    expect(draft.securityProtocol).toBe("SASL_SSL");
+    expect(draft.saslMechanism).toBe("SCRAM-SHA-512");
+    expect(draft.saslOauthUrl).toBe("https://idp.example.com/token");
+    expect(draft.schemaRegistryEndpoint).toBe("https://schema-registry.local");
+    expect(draft.schemaRegistryTrustStoreLocation).toBe("/etc/ts.jks");
+    expect(draft.schemaRegistryKeystoreLocation).toBe("/etc/ks.jks");
+  });
+
+  it("leaves every secret field blank, since Connection never carries secrets", () => {
+    const draft = connectionToDraft(sampleConnection());
+
+    expect(draft.schemaRegistryBasicAuthCredentials).toBe("");
+    expect(draft.schemaRegistryTrustStorePassword).toBe("");
+    expect(draft.schemaRegistryKeystorePassword).toBe("");
+    expect(draft.schemaRegistryKeystoreKeyPassword).toBe("");
+  });
+
+  it("renders a null zookeeper port as an empty string rather than 'null'", () => {
+    const draft = connectionToDraft(sampleConnection({ zookeeperPort: null, zookeeperHost: null }));
+    expect(draft.zookeeperPort).toBe("");
+    expect(draft.zookeeperHost).toBe("");
+  });
+
+  it("round-trips back through toNewConnection to an equivalent NewConnection", () => {
+    const connection = sampleConnection();
+    const draft = connectionToDraft(connection);
+    const newConnection = toNewConnection(draft);
+
+    expect(newConnection.name).toBe(connection.name);
+    expect(newConnection.bootstrapServers).toBe(connection.bootstrapServers);
+    expect(newConnection.kafkaVersion).toBe(connection.kafkaVersion);
+    expect(newConnection.zookeeperEnabled).toBe(connection.zookeeperEnabled);
+    expect(newConnection.zookeeperHost).toBe(connection.zookeeperHost);
+    expect(newConnection.zookeeperPort).toBe(connection.zookeeperPort);
+    expect(newConnection.securityProtocol).toBe(connection.securityProtocol);
+    expect(newConnection.saslMechanism).toBe(connection.saslMechanism);
+  });
+});
+
+describe("draftsEqual", () => {
+  it("is true for two independently-created equivalent drafts", () => {
+    expect(draftsEqual(emptyDraft(), emptyDraft())).toBe(true);
+  });
+
+  it("is false when a single field differs", () => {
+    const a = emptyDraft();
+    const b = { ...emptyDraft(), name: "Changed" };
+    expect(draftsEqual(a, b)).toBe(false);
+  });
+
+  it("is false when a boolean field differs", () => {
+    const a = emptyDraft();
+    const b = { ...emptyDraft(), zookeeperEnabled: true };
+    expect(draftsEqual(a, b)).toBe(false);
+  });
+
+  it("is true again once the differing field is reverted", () => {
+    const original = emptyDraft();
+    const draft = { ...original, name: "Changed" };
+    const reverted = { ...draft, name: original.name };
+    expect(draftsEqual(original, reverted)).toBe(true);
   });
 });

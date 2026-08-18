@@ -59,3 +59,36 @@ export function useTestConnection() {
     mutationFn: (newConnection: NewConnection) => api.testConnection(newConnection),
   });
 }
+
+/** Whether the cluster detail panel should treat this connection as connected (gates field-disabling and the tree's Brokers/Topics/Consumers expansion). */
+export function useConnectionConnected(id: string) {
+  return useQuery({
+    queryKey: ["connection-connected", id],
+    queryFn: () => api.isConnectionConnected(id),
+    initialData: false,
+  });
+}
+
+/** Backs the cluster detail panel's "Reconnect" button. */
+export function useConnect() {
+  const queryClient = useQueryClient();
+  return useMutation<ConnectionStatus, Error, string>({
+    mutationFn: (id: string) => api.connectConnection(id),
+    onSuccess: (_status, id) => {
+      queryClient.invalidateQueries({ queryKey: ["connection-connected", id] });
+      queryClient.invalidateQueries({ queryKey: ["connection-status", id] });
+    },
+  });
+}
+
+/** Backs the cluster detail panel's "Disconnect" button. */
+export function useDisconnect() {
+  const queryClient = useQueryClient();
+  return useMutation<void, Error, string>({
+    mutationFn: (id: string) => api.disconnectConnection(id),
+    onSuccess: (_void, id) => {
+      queryClient.invalidateQueries({ queryKey: ["connection-connected", id] });
+      queryClient.invalidateQueries({ queryKey: ["connection-status", id] });
+    },
+  });
+}

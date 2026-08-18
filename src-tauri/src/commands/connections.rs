@@ -93,6 +93,7 @@ pub async fn connection_delete(
     for key in SCHEMA_REGISTRY_SECRET_KEYS {
         state.secrets.delete_secret(&id, key)?;
     }
+    state.connections.mark_disconnected(&id);
     crate::logging::emit_log(&app, "info", format!("Deleted connection {id}"));
     Ok(())
 }
@@ -145,4 +146,33 @@ pub async fn connection_test(
             None,
         )
         .await?)
+}
+
+/// Backs the cluster detail panel's "Reconnect" button. Pings the saved
+/// connection and, only on success, marks it connected in
+/// `AppState::connections` — this is what gates the tree's Brokers/Topics/
+/// Consumers expansion and the panel's field-disabling.
+#[tauri::command]
+pub async fn connection_connect(
+    state: State<'_, AppState>,
+    id: String,
+) -> Result<ConnectionStatus, CommandError> {
+    let connection = kafkaoxide_db::connections::get(&state.pool, &id).await?;
+    let status = state.kafka.check_status(&connection, None).await?;
+    if status == ConnectionStatus::Reachable {
+        state.connections.mark_connected(&id);
+    }
+    Ok(status)
+}
+
+/// Backs the cluster detail panel's "Disconnect" button.
+#[tauri::command]
+pub async fn connection_disconnect(state: State<'_, AppState>, id: String) -> Result<(), CommandError> {
+    state.connections.mark_disconnected(&id);
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn connection_is_connected(state: State<'_, AppState>, id: String) -> Result<bool, CommandError> {
+    Ok(state.connections.is_connected(&id))
 }

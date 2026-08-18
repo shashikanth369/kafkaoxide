@@ -26,4 +26,9 @@ describe("SecurityTab", () => {
 
     expect(onChange).toHaveBeenCalledWith({ securityProtocol: "SASL_SSL" });
   });
+
+  it("disables the type dropdown when disabled is true", () => {
+    render(<SecurityTab draft={emptyDraft()} onChange={vi.fn()} disabled />);
+    expect(screen.getByLabelText("Type")).toBeDisabled();
+  });
 });

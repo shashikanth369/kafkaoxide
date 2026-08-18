@@ -1,4 +1,4 @@
-import { KAFKA_VERSIONS, NewConnection, SaslMechanism, SecurityProtocol } from "../../../lib/tauri";
+import { Connection, KAFKA_VERSIONS, NewConnection, SaslMechanism, SecurityProtocol } from "../../../lib/tauri";
 
 /**
  * Editable form state for the New Connection modal. Every field is a plain
@@ -93,4 +93,41 @@ export function toNewConnection(draft: ConnectionDraft): NewConnection {
     schemaRegistryKeystorePassword: nullableTrim(draft.schemaRegistryKeystorePassword),
     schemaRegistryKeystoreKeyPassword: nullableTrim(draft.schemaRegistryKeystoreKeyPassword),
   };
+}
+
+/**
+ * Loads a saved `Connection` (returned by the backend, never carrying
+ * secrets) into editable draft state for the cluster detail panel. Every
+ * secret field starts blank — the user must re-enter a secret to change it,
+ * same as the New Connection modal never pre-fills a password.
+ */
+export function connectionToDraft(connection: Connection): ConnectionDraft {
+  return {
+    name: connection.name,
+    bootstrapServers: connection.bootstrapServers,
+    kafkaVersion: connection.kafkaVersion,
+    zookeeperEnabled: connection.zookeeperEnabled,
+    zookeeperHost: connection.zookeeperHost ?? "",
+    zookeeperPort: connection.zookeeperPort !== null ? String(connection.zookeeperPort) : "",
+    zookeeperChrootPath: connection.zookeeperChrootPath ?? "",
+    securityProtocol: connection.securityProtocol,
+    saslMechanism: connection.saslMechanism ?? "",
+    saslOauthUrl: connection.saslOauthUrl ?? "",
+    schemaRegistryEndpoint: connection.schemaRegistryEndpoint ?? "",
+    schemaRegistryBasicAuthCredentials: "",
+    schemaRegistryTrustStoreLocation: connection.schemaRegistryTrustStoreLocation ?? "",
+    schemaRegistryTrustStorePassword: "",
+    schemaRegistryKeystoreLocation: connection.schemaRegistryKeystoreLocation ?? "",
+    schemaRegistryKeystorePassword: "",
+    schemaRegistryKeystoreKeyPassword: "",
+  };
+}
+
+/**
+ * Drives the cluster detail panel's "Update" button — enabled only once the
+ * draft has actually diverged from the last-loaded/last-saved snapshot, not
+ * just because a field was clicked into.
+ */
+export function draftsEqual(a: ConnectionDraft, b: ConnectionDraft): boolean {
+  return (Object.keys(a) as (keyof ConnectionDraft)[]).every((key) => a[key] === b[key]);
 }

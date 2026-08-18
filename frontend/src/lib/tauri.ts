@@ -89,6 +89,9 @@ export const api = {
     invoke<ConnectionStatus>("connection_ping_zookeeper", { host, port }),
   testConnection: (newConnection: NewConnection) =>
     invoke<ConnectionStatus>("connection_test", { newConnection }),
+  connectConnection: (id: string) => invoke<ConnectionStatus>("connection_connect", { id }),
+  disconnectConnection: (id: string) => invoke<void>("connection_disconnect", { id }),
+  isConnectionConnected: (id: string) => invoke<boolean>("connection_is_connected", { id }),
   listTabs: () => invoke<Tab[]>("tab_list"),
   createTab: (name: string) => invoke<Tab>("tab_create", { name }),
   renameTab: (id: string, name: string) => invoke<void>("tab_rename", { id, name }),

@@ -165,6 +165,53 @@ body {
   padding: 0;
 }
 
+.connection-row {
+  display: flex;
+  align-items: center;
+  padding: 3px 6px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.connection-row:hover {
+  background: var(--color-bg);
+}
+.connection-row--selected {
+  background: var(--color-accent);
+  color: var(--color-bg);
+}
+
+.cluster-detail-header {
+  padding: 4px 0 12px;
+}
+.cluster-detail-header h2 {
+  margin: 0;
+  font-size: 14px;
+}
+
+.cluster-detail-footer {
+  display: flex;
+  gap: 8px;
+  padding: 12px 0 0;
+  border-top: 1px solid var(--color-border);
+}
+.cluster-detail-footer button {
+  padding: 6px 14px;
+  border-radius: 4px;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-elevated);
+  color: var(--color-fg);
+  cursor: pointer;
+}
+.cluster-detail-footer button:last-child {
+  background: var(--color-accent);
+  color: var(--color-bg);
+  border-color: var(--color-accent);
+}
+.cluster-detail-footer button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .connection-modal-overlay {
   position: fixed;
   inset: 0;
@@ -242,6 +289,13 @@ body {
   flex-direction: row !important;
   align-items: center;
   gap: 6px !important;
+}
+
+.connection-modal-fieldset {
+  border: none;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
 }
 
 .connection-modal-section {

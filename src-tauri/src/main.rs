@@ -26,6 +26,7 @@ fn main() {
                     kafka: Arc::new(kafkaoxide_kafka::RdKafkaClient),
                     zookeeper: Arc::new(kafkaoxide_kafka::TcpZookeeperClient),
                     secrets: Arc::new(kafkaoxide_secrets::KeyringSecretStore),
+                    connections: kafkaoxide_core::ConnectionRegistry::default(),
                 });
 
                 logging::emit_log(&handle, "info", "Application started");
@@ -41,6 +42,9 @@ fn main() {
             commands::connections::connection_ping_bootstrap,
             commands::connections::connection_ping_zookeeper,
             commands::connections::connection_test,
+            commands::connections::connection_connect,
+            commands::connections::connection_disconnect,
+            commands::connections::connection_is_connected,
             commands::tabs::tab_list,
             commands::tabs::tab_create,
             commands::tabs::tab_rename,

@@ -49,4 +49,12 @@ describe("AdvancedTab", () => {
 
     expect(onChange).toHaveBeenCalledWith({ saslMechanism: "SCRAM-SHA-256" });
   });
+
+  it("disables every field when disabled is true", () => {
+    render(<AdvancedTab draft={emptyDraft()} onChange={vi.fn()} disabled />);
+    expect(screen.getByLabelText("SASL mechanism")).toBeDisabled();
+    expect(screen.getByLabelText("SASL OAuth/OIDC identity provider URL")).toBeDisabled();
+    expect(screen.getByLabelText("Endpoint")).toBeDisabled();
+    expect(screen.getByLabelText("Keystore private key password")).toBeDisabled();
+  });
 });

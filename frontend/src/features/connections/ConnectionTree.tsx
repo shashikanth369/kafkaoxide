@@ -1,17 +1,34 @@
 import { ConnectionStatus } from "../../lib/tauri";
-import { useConnectionsQuery, useConnectionStatus } from "./useConnections";
+import { useConnectionConnected, useConnectionsQuery, useConnectionStatus } from "./useConnections";
+import { useWorkspaceSelectionStore } from "../workspace/useWorkspaceSelectionStore";
 
-function statusClass(status: ConnectionStatus): string {
-  if (status === "REACHABLE") return "status-dot status-dot--green";
+/**
+ * Green requires both a reachable ping AND an explicit "connected" session
+ * (see Reconnect/Disconnect) — a cluster that's merely network-reachable
+ * but never connected shows gray, matching the cluster detail panel's
+ * connect-state-gated field disabling and the tree's Brokers/Topics/
+ * Consumers expansion, which key off the same "connected" flag.
+ */
+function statusClass(status: ConnectionStatus, isConnected: boolean): string {
   if (status === "UNREACHABLE") return "status-dot status-dot--red";
+  if (status === "REACHABLE" && isConnected) return "status-dot status-dot--green";
   return "status-dot status-dot--gray";
 }
 
 function ConnectionRow({ id, name }: { id: string; name: string }) {
   const { data: status } = useConnectionStatus(id);
+  const { data: isConnected } = useConnectionConnected(id);
+  const selection = useWorkspaceSelectionStore((s) => s.selection);
+  const selectConnection = useWorkspaceSelectionStore((s) => s.selectConnection);
+  const isSelected = selection?.type === "connection" && selection.id === id;
+
   return (
-    <li className="connection-row" data-testid={`connection-row-${id}`}>
-      <span className={statusClass(status ?? "UNKNOWN")} data-testid={`status-${id}`} />
+    <li
+      className={`connection-row${isSelected ? " connection-row--selected" : ""}`}
+      data-testid={`connection-row-${id}`}
+      onClick={() => selectConnection(id)}
+    >
+      <span className={statusClass(status ?? "UNKNOWN", isConnected ?? false)} data-testid={`status-${id}`} />
       <span>{name}</span>
     </li>
   );

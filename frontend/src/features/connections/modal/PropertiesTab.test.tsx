@@ -109,4 +109,19 @@ describe("PropertiesTab", () => {
     renderWithClient(<PropertiesTab draft={draft} onChange={vi.fn()} />);
     expect(screen.getByRole("button", { name: "Ping zookeeper" })).toBeDisabled();
   });
+
+  it("keeps cluster name editable but disables every other field when disabled is true", () => {
+    const draft = { ...emptyDraft(), zookeeperEnabled: true, zookeeperHost: "zk.local", zookeeperPort: "2181" };
+    renderWithClient(<PropertiesTab draft={draft} onChange={vi.fn()} disabled />);
+
+    expect(screen.getByLabelText("Cluster name")).toBeEnabled();
+    expect(screen.getByLabelText("Bootstrap servers")).toBeDisabled();
+    expect(screen.getByLabelText("Kafka cluster version")).toBeDisabled();
+    expect(screen.getByLabelText("Enable Zookeeper")).toBeDisabled();
+    expect(screen.getByLabelText("Zookeeper host")).toBeDisabled();
+    expect(screen.getByLabelText("Zookeeper port")).toBeDisabled();
+    expect(screen.getByLabelText("Zookeeper chroot path")).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Ping bootstrap servers" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Ping zookeeper" })).toBeDisabled();
+  });
 });
