@@ -176,3 +176,33 @@ pub async fn connection_disconnect(state: State<'_, AppState>, id: String) -> Re
 pub async fn connection_is_connected(state: State<'_, AppState>, id: String) -> Result<bool, CommandError> {
     Ok(state.connections.is_connected(&id))
 }
+
+/// Backs the tree's "Brokers" sub-list once a cluster is connected.
+#[tauri::command]
+pub async fn connection_list_brokers(
+    state: State<'_, AppState>,
+    id: String,
+) -> Result<Vec<kafkaoxide_core::BrokerSummary>, CommandError> {
+    let connection = kafkaoxide_db::connections::get(&state.pool, &id).await?;
+    Ok(state.kafka.list_brokers(&connection, None).await?)
+}
+
+/// Backs the tree's "Topics" sub-list once a cluster is connected.
+#[tauri::command]
+pub async fn connection_list_topics(
+    state: State<'_, AppState>,
+    id: String,
+) -> Result<Vec<kafkaoxide_core::TopicSummary>, CommandError> {
+    let connection = kafkaoxide_db::connections::get(&state.pool, &id).await?;
+    Ok(state.kafka.list_topics(&connection, None).await?)
+}
+
+/// Backs the tree's "Consumers" sub-list once a cluster is connected.
+#[tauri::command]
+pub async fn connection_list_consumer_groups(
+    state: State<'_, AppState>,
+    id: String,
+) -> Result<Vec<kafkaoxide_core::ConsumerGroupSummary>, CommandError> {
+    let connection = kafkaoxide_db::connections::get(&state.pool, &id).await?;
+    Ok(state.kafka.list_consumer_groups(&connection, None).await?)
+}

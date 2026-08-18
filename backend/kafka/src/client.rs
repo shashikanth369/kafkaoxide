@@ -1,11 +1,16 @@
 use async_trait::async_trait;
 use error_stack::{Result, ResultExt};
-use kafkaoxide_core::{AppError, Connection, ConnectionStatus, SaslMechanism, SecurityProtocol};
+use kafkaoxide_core::{
+    AppError, BrokerSummary, Connection, ConnectionStatus, ConsumerGroupSummary, SaslMechanism,
+    SecurityProtocol, TopicSummary,
+};
 use rdkafka::consumer::{BaseConsumer, Consumer};
 use rdkafka::ClientConfig;
 use std::time::Duration;
 
 use crate::config::{build_client_config, client_config};
+
+const METADATA_TIMEOUT: Duration = Duration::from_secs(5);
 
 #[async_trait]
 pub trait KafkaClient: Send + Sync {
@@ -36,6 +41,27 @@ pub trait KafkaClient: Send + Sync {
         sasl_mechanism: Option<SaslMechanism>,
         password: Option<&str>,
     ) -> Result<ConnectionStatus, AppError>;
+
+    /// Backs the tree's "Brokers" sub-list once a cluster is connected.
+    async fn list_brokers(
+        &self,
+        connection: &Connection,
+        password: Option<&str>,
+    ) -> Result<Vec<BrokerSummary>, AppError>;
+
+    /// Backs the tree's "Topics" sub-list once a cluster is connected.
+    async fn list_topics(
+        &self,
+        connection: &Connection,
+        password: Option<&str>,
+    ) -> Result<Vec<TopicSummary>, AppError>;
+
+    /// Backs the tree's "Consumers" sub-list once a cluster is connected.
+    async fn list_consumer_groups(
+        &self,
+        connection: &Connection,
+        password: Option<&str>,
+    ) -> Result<Vec<ConsumerGroupSummary>, AppError>;
 }
 
 async fn run_probe(config: ClientConfig) -> Result<ConnectionStatus, AppError> {
@@ -92,6 +118,97 @@ impl KafkaClient for RdKafkaClient {
         ))
         .await
     }
+
+    async fn list_brokers(
+        &self,
+        connection: &Connection,
+        password: Option<&str>,
+    ) -> Result<Vec<BrokerSummary>, AppError> {
+        let config = client_config(connection, password);
+        tokio::task::spawn_blocking(move || {
+            let consumer: BaseConsumer = config
+                .create()
+                .change_context(AppError::Kafka)
+                .attach_printable("failed to create kafka consumer")?;
+            let metadata = consumer
+                .fetch_metadata(None, METADATA_TIMEOUT)
+                .change_context(AppError::Kafka)
+                .attach_printable("failed to fetch broker metadata")?;
+
+            Ok(metadata
+                .brokers()
+                .iter()
+                .map(|broker| BrokerSummary {
+                    id: broker.id(),
+                    host: broker.host().to_string(),
+                    port: broker.port(),
+                })
+                .collect())
+        })
+        .await
+        .change_context(AppError::Kafka)
+        .attach_printable("list_brokers task panicked")?
+    }
+
+    async fn list_topics(
+        &self,
+        connection: &Connection,
+        password: Option<&str>,
+    ) -> Result<Vec<TopicSummary>, AppError> {
+        let config = client_config(connection, password);
+        tokio::task::spawn_blocking(move || {
+            let consumer: BaseConsumer = config
+                .create()
+                .change_context(AppError::Kafka)
+                .attach_printable("failed to create kafka consumer")?;
+            let metadata = consumer
+                .fetch_metadata(None, METADATA_TIMEOUT)
+                .change_context(AppError::Kafka)
+                .attach_printable("failed to fetch topic metadata")?;
+
+            Ok(metadata
+                .topics()
+                .iter()
+                .map(|topic| TopicSummary {
+                    name: topic.name().to_string(),
+                    partition_count: topic.partitions().len(),
+                })
+                .collect())
+        })
+        .await
+        .change_context(AppError::Kafka)
+        .attach_printable("list_topics task panicked")?
+    }
+
+    async fn list_consumer_groups(
+        &self,
+        connection: &Connection,
+        password: Option<&str>,
+    ) -> Result<Vec<ConsumerGroupSummary>, AppError> {
+        let config = client_config(connection, password);
+        tokio::task::spawn_blocking(move || {
+            let consumer: BaseConsumer = config
+                .create()
+                .change_context(AppError::Kafka)
+                .attach_printable("failed to create kafka consumer")?;
+            let groups = consumer
+                .fetch_group_list(None, METADATA_TIMEOUT)
+                .change_context(AppError::Kafka)
+                .attach_printable("failed to fetch consumer group list")?;
+
+            Ok(groups
+                .groups()
+                .iter()
+                .map(|group| ConsumerGroupSummary {
+                    group_id: group.name().to_string(),
+                    state: group.state().to_string(),
+                })
+                .collect())
+        })
+        .await
+        .change_context(AppError::Kafka)
+        .attach_printable("list_consumer_groups task panicked")?
+    }
 }
 
 #[cfg(test)]
@@ -145,6 +262,27 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(status, ConnectionStatus::Unreachable);
+    }
+
+    #[tokio::test]
+    async fn list_brokers_errors_for_a_closed_port() {
+        let client = RdKafkaClient;
+        let result = client.list_brokers(&sample_connection(), None).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn list_topics_errors_for_a_closed_port() {
+        let client = RdKafkaClient;
+        let result = client.list_topics(&sample_connection(), None).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn list_consumer_groups_errors_for_a_closed_port() {
+        let client = RdKafkaClient;
+        let result = client.list_consumer_groups(&sample_connection(), None).await;
+        assert!(result.is_err());
     }
 
     #[tokio::test]

@@ -7,6 +7,7 @@ import { useTabsStore } from "./features/tabs/useTabsStore";
 import { ConnectionTree } from "./features/connections/ConnectionTree";
 import { ConnectionModal } from "./features/connections/modal/ConnectionModal";
 import { ClusterDetailPanel } from "./features/connections/ClusterDetailPanel";
+import { BrokerDetailPanel } from "./features/connections/BrokerDetailPanel";
 import { useCreateConnection } from "./features/connections/useConnections";
 import { BottomPanel } from "./features/bottom-panel/BottomPanel";
 import { ResizableShell } from "./features/layout/ResizableShell";
@@ -53,11 +54,17 @@ function AppShell() {
           }
           middle={
             <main className="app-main">
-              {selection?.type === "connection" ? (
-                <ClusterDetailPanel connectionId={selection.id} />
-              ) : (
-                <p className="app-main-placeholder">Select a cluster, broker, or topic.</p>
+              {selection?.type === "connection" && <ClusterDetailPanel connectionId={selection.id} />}
+              {selection?.type === "broker" && (
+                <BrokerDetailPanel connectionId={selection.connectionId} brokerId={selection.brokerId} />
               )}
+              {selection?.type === "topic" && (
+                <p className="app-main-placeholder">Topic "{selection.topicName}" — coming soon.</p>
+              )}
+              {selection?.type === "consumerGroup" && (
+                <p className="app-main-placeholder">Consumer group "{selection.groupId}" — coming soon.</p>
+              )}
+              {!selection && <p className="app-main-placeholder">Select a cluster, broker, or topic.</p>}
             </main>
           }
         />

@@ -1,6 +1,8 @@
+import { useState } from "react";
 import { ConnectionStatus } from "../../lib/tauri";
 import { useConnectionConnected, useConnectionsQuery, useConnectionStatus } from "./useConnections";
 import { useWorkspaceSelectionStore } from "../workspace/useWorkspaceSelectionStore";
+import { ClusterResourceTree } from "./ClusterResourceTree";
 
 /**
  * Green requires both a reachable ping AND an explicit "connected" session
@@ -21,16 +23,38 @@ function ConnectionRow({ id, name }: { id: string; name: string }) {
   const selection = useWorkspaceSelectionStore((s) => s.selection);
   const selectConnection = useWorkspaceSelectionStore((s) => s.selectConnection);
   const isSelected = selection?.type === "connection" && selection.id === id;
+  const [expanded, setExpanded] = useState(false);
+  const connected = isConnected ?? false;
 
   return (
-    <li
-      className={`connection-row${isSelected ? " connection-row--selected" : ""}`}
-      data-testid={`connection-row-${id}`}
-      onClick={() => selectConnection(id)}
-    >
-      <span className={statusClass(status ?? "UNKNOWN", isConnected ?? false)} data-testid={`status-${id}`} />
-      <span>{name}</span>
-    </li>
+    <>
+      <li
+        className={`connection-row${isSelected ? " connection-row--selected" : ""}`}
+        data-testid={`connection-row-${id}`}
+        onClick={() => selectConnection(id)}
+      >
+        {connected && (
+          <button
+            type="button"
+            className={`tree-caret-button${expanded ? " tree-caret-button--expanded" : ""}`}
+            aria-label={`${expanded ? "Collapse" : "Expand"} ${name}`}
+            onClick={(e) => {
+              e.stopPropagation();
+              setExpanded((current) => !current);
+            }}
+          >
+            <span className="tree-caret" aria-hidden="true" />
+          </button>
+        )}
+        <span className={statusClass(status ?? "UNKNOWN", connected)} data-testid={`status-${id}`} />
+        <span>{name}</span>
+      </li>
+      {connected && expanded && (
+        <li className="connection-row-children">
+          <ClusterResourceTree connectionId={id} />
+        </li>
+      )}
+    </>
   );
 }
 

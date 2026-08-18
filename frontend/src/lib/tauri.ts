@@ -74,6 +74,22 @@ export interface Tab {
   position: number;
 }
 
+export interface BrokerSummary {
+  id: number;
+  host: string;
+  port: number;
+}
+
+export interface TopicSummary {
+  name: string;
+  partitionCount: number;
+}
+
+export interface ConsumerGroupSummary {
+  groupId: string;
+  state: string;
+}
+
 export const api = {
   listConnections: () => invoke<Connection[]>("connection_list"),
   createConnection: (newConnection: NewConnection) =>
@@ -92,6 +108,10 @@ export const api = {
   connectConnection: (id: string) => invoke<ConnectionStatus>("connection_connect", { id }),
   disconnectConnection: (id: string) => invoke<void>("connection_disconnect", { id }),
   isConnectionConnected: (id: string) => invoke<boolean>("connection_is_connected", { id }),
+  listBrokers: (id: string) => invoke<BrokerSummary[]>("connection_list_brokers", { id }),
+  listTopics: (id: string) => invoke<TopicSummary[]>("connection_list_topics", { id }),
+  listConsumerGroups: (id: string) =>
+    invoke<ConsumerGroupSummary[]>("connection_list_consumer_groups", { id }),
   listTabs: () => invoke<Tab[]>("tab_list"),
   createTab: (name: string) => invoke<Tab>("tab_create", { name }),
   renameTab: (id: string, name: string) => invoke<void>("tab_rename", { id, name }),

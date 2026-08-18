@@ -122,4 +122,52 @@ describe("ConnectionTree", () => {
 
     expect(screen.getByTestId("connection-row-1")).toHaveClass("connection-row--selected");
   });
+
+  it("does not show an expand toggle for a connection that isn't connected", async () => {
+    setInvokeHandlers({
+      connection_list: () => [sampleConnection()],
+      connection_check_status: () => "UNKNOWN",
+      connection_is_connected: () => false,
+    });
+    renderWithClient(<ConnectionTree />);
+    await screen.findByText("Local Kafka");
+
+    expect(screen.queryByRole("button", { name: "Expand Local Kafka" })).not.toBeInTheDocument();
+  });
+
+  it("shows an expand toggle once connected, and expanding it reveals the resource tree", async () => {
+    const isConnected = vi.fn(() => true);
+    setInvokeHandlers({
+      connection_list: () => [sampleConnection()],
+      connection_check_status: () => "REACHABLE",
+      connection_is_connected: isConnected,
+    });
+    const user = userEvent.setup();
+    renderWithClient(<ConnectionTree />);
+    await screen.findByText("Local Kafka");
+    await waitFor(() => expect(isConnected).toHaveBeenCalled());
+
+    expect(screen.queryByTestId("resource-tree-1")).not.toBeInTheDocument();
+    await user.click(await screen.findByRole("button", { name: "Expand Local Kafka" }));
+
+    expect(screen.getByTestId("resource-tree-1")).toBeInTheDocument();
+    expect(screen.getByTestId("category-Brokers")).toBeInTheDocument();
+  });
+
+  it("clicking the expand toggle does not change the workspace selection", async () => {
+    const isConnected = vi.fn(() => true);
+    setInvokeHandlers({
+      connection_list: () => [sampleConnection()],
+      connection_check_status: () => "REACHABLE",
+      connection_is_connected: isConnected,
+    });
+    const user = userEvent.setup();
+    renderWithClient(<ConnectionTree />);
+    await screen.findByText("Local Kafka");
+    await waitFor(() => expect(isConnected).toHaveBeenCalled());
+
+    await user.click(await screen.findByRole("button", { name: "Expand Local Kafka" }));
+
+    expect(useWorkspaceSelectionStore.getState().selection).toBeNull();
+  });
 });
