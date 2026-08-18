@@ -4,7 +4,10 @@ mod error;
 mod message;
 mod registry;
 
-pub use cluster::{BrokerSummary, ConfigEntry, ConsumerGroupSummary, PartitionSummary, TopicSummary};
+pub use cluster::{
+    BrokerSummary, ConfigEntry, ConsumerGroupLag, ConsumerGroupSummary, PartitionLag,
+    PartitionSummary, TopicSummary,
+};
 pub use message::{MessageFilter, TopicMessage};
 pub use connection::{
     Connection, ConnectionStatus, NewConnection, SaslMechanism, SecurityProtocol,
