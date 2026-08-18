@@ -25,8 +25,14 @@ pub async fn create(pool: &SqlitePool, name: &str) -> Result<Tab, AppError> {
     let id = Uuid::new_v4().to_string();
     let now = chrono::Utc::now().to_rfc3339();
 
+    let mut tx = pool
+        .begin()
+        .await
+        .change_context(AppError::Db)
+        .attach_printable("failed to start transaction for tab creation")?;
+
     let next_position: i64 = sqlx::query_scalar("SELECT COALESCE(MAX(position), -1) + 1 FROM tabs")
-        .fetch_one(pool)
+        .fetch_one(&mut *tx)
         .await
         .change_context(AppError::Db)
         .attach_printable("failed to compute next tab position")?;
@@ -36,10 +42,15 @@ pub async fn create(pool: &SqlitePool, name: &str) -> Result<Tab, AppError> {
         .bind(name)
         .bind(next_position)
         .bind(&now)
-        .execute(pool)
+        .execute(&mut *tx)
         .await
         .change_context(AppError::Db)
         .attach_printable("failed to insert tab")?;
+
+    tx.commit()
+        .await
+        .change_context(AppError::Db)
+        .attach_printable("failed to commit tab creation transaction")?;
 
     Ok(Tab {
         id,
@@ -66,12 +77,18 @@ pub async fn rename(pool: &SqlitePool, id: &str, name: &str) -> Result<(), AppEr
 }
 
 pub async fn delete(pool: &SqlitePool, id: &str) -> Result<(), AppError> {
-    sqlx::query("DELETE FROM tabs WHERE id = ?1")
+    let result = sqlx::query("DELETE FROM tabs WHERE id = ?1")
         .bind(id)
         .execute(pool)
         .await
         .change_context(AppError::Db)
         .attach_printable_lazy(|| format!("failed to delete tab {id}"))?;
+
+    if result.rows_affected() == 0 {
+        return Err(error_stack::Report::new(AppError::NotFound))
+            .attach_printable_lazy(|| format!("tab {id} not found"));
+    }
+
     Ok(())
 }
 
@@ -139,5 +156,12 @@ mod tests {
 
         let tabs = list(&pool).await.unwrap();
         assert!(tabs.is_empty());
+    }
+
+    #[tokio::test]
+    async fn delete_of_missing_tab_returns_not_found() {
+        let pool = test_pool().await;
+        let result = delete(&pool, "missing-id").await;
+        assert!(result.is_err());
     }
 }
