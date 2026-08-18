@@ -21,10 +21,11 @@ Executing via: superpowers:subagent-driven-development (implementer → spec rev
   - `role="tab"` divs have no keyboard operability (no `tabIndex`, no Enter/Space handler) — breaks the implicit ARIA tab-role contract.
 - **Task 9** — Connections feature (`ConnectionForm`, `ConnectionTree`, `useConnections`). Spec-compliant ✅. Code-quality review initially returned "Needs changes" (4 findings); fixed in commit `3100e02` (submit try/catch + pending/disabled state + visible error alert, `saslPassword` cleared only on success, `role="tree"`/`role="treeitem"` dropped in favor of plain `ul`/`li` + `data-testid`, added `useUpdateConnection` mirroring `useCreateConnection`). Independent re-review: **Approved** (verified `npm run test` 21/21 and `npx tsc --noEmit` clean independently, confirmed no leftover ARIA role dependencies, confirmed password preserved on failure/cleared on success).
 
+- **Task 10** — Bottom panel (Logs tool). Approved (verified independently: 23/23 tests, matches plan's file list exactly).
+- **Task 11** — Wired the full app shell (`App.tsx`, `global.css`) and fixed both deferred Task 8 (tabs) issues in the same task: `useTabsStore` now catches/surfaces mutation errors (`role="alert"`, cleared on next success), `TabBar`'s `role="tab"` divs now have `tabIndex`+Enter/Space keyboard activation with a guard so it doesn't hijack the rename `<input>`'s own keystrokes. `loadTabs()` is now actually called on mount (was a real gap — nothing called it before). Independent review: **Approved with minor notes** (27/27 tests, tsc clean; one minor deferred UX gap — `error` in `useTabsStore` isn't cleared when the user switches tabs instead of retrying a failed rename, so a stale alert can linger — not a blocker, worth a quick follow-up sometime).
+
 ## Not started
 
-- **Task 10** — Bottom panel (Logs tool): `useLogsStore`, `useLogsListener` (Tauri `listen("log", ...)`), `LogsPanel`, `BottomPanel`.
-- **Task 11** — Wire the full app shell (`App.tsx`, `global.css`): assemble tabs + sidebar (form/tree) + main + bottom panel. **This is also the natural point to fix the two deferred Task 8 (tabs) accessibility/error-surfacing notes**, since that's where they become user-facing.
 - **Task 12** — Full workspace verification: `cargo test --workspace`, `npm run test`/`build`, and (only if system packages get installed) a live `cargo build -p kafkaoxide-app` + manual `npm run tauri dev` smoke test.
 
 ## Environment notes carried forward
