@@ -1,10 +1,10 @@
 [workspace]
 resolver = "2"
 members = [
-  "crates/core",
-  "crates/db",
-  "crates/secrets",
-  "crates/kafka",
+  "backend/core",
+  "backend/db",
+  "backend/secrets",
+  "backend/kafka",
   "src-tauri",
 ]
 
@@ -17,7 +17,7 @@ uuid = { version = "1", features = ["v4", "serde"] }
 chrono = { version = "0.4", features = ["serde"] }
 strum = { version = "0.26", features = ["derive"] }
 async-trait = "0.1"
-kafkaoxide-core = { path = "crates/core" }
-kafkaoxide-db = { path = "crates/db" }
-kafkaoxide-secrets = { path = "crates/secrets" }
-kafkaoxide-kafka = { path = "crates/kafka" }
+kafkaoxide-core = { path = "backend/core" }
+kafkaoxide-db = { path = "backend/db" }
+kafkaoxide-secrets = { path = "backend/secrets" }
+kafkaoxide-kafka = { path = "backend/kafka" }

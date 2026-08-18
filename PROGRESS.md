@@ -37,3 +37,21 @@ Phase 0 is functionally complete and verified everywhere this sandbox allows. Th
 
 - This sandbox lacks `pkg-config` and Linux GTK/dbus/webkit2gtk dev packages — `kafkaoxide-app` (and only that crate) can't fully build/link here. All library crates (core/db/secrets/kafka) and the frontend build/test fine.
 - `rdkafka`'s vendored librdkafka build works (cmake/gcc/libclang all present) but needed the `.build-stubs/curl/curl.h` + `.cargo/config.toml` CPATH workaround for a genuine upstream `rdkafka-sys` bug (`#ifdef` vs `#if` around `WITH_OAUTHBEARER_OIDC`).
+
+## Post-Phase-0: repo restructure (2026-08-18)
+
+Moved `crates/{core,db,secrets,kafka}` → `backend/{core,db,secrets,kafka}` and
+`src/`, `index.html`, `package.json`, `package-lock.json`, `tsconfig.json`,
+`vite.config.ts`, `vitest.config.ts` → `frontend/`. `src-tauri/` (and its
+`tauri.conf.json`) stayed in place at the repo root — Tauri's tooling only
+looks for its config inside `src-tauri/`, so that's the practical meaning of
+"tauri config in the root" here. `src-tauri/tauri.conf.json`'s
+`beforeDevCommand`/`beforeBuildCommand` now run with `cwd: "../frontend"`,
+and `frontendDist` points at `../frontend/dist`. Root `Cargo.toml` workspace
+members and path deps updated accordingly. No behavior change — verified via
+`cargo test --workspace --exclude kafkaoxide-app` (24/24) and `npm test` from
+`frontend/` (27/27), both matching pre-restructure baselines, plus `cargo
+build --workspace` failing with the identical pre-existing `pkg-config`
+signature as before (confirming `tauri.conf.json` itself parsed correctly).
+Historical docs under `docs/superpowers/plans/` and `docs/superpowers/specs/`
+were left un-edited since they describe what was true when written.
