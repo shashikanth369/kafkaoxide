@@ -251,3 +251,17 @@ pub async fn connection_describe_topic_config(
     let connection = kafkaoxide_db::connections::get(&state.pool, &id).await?;
     Ok(state.kafka.describe_topic_config(&connection, &topic, None).await?)
 }
+
+/// Backs the consumer group detail panel's "Refresh" button.
+#[tauri::command]
+pub async fn connection_fetch_consumer_group_lag(
+    state: State<'_, AppState>,
+    id: String,
+    group_id: String,
+) -> Result<kafkaoxide_core::ConsumerGroupLag, CommandError> {
+    let connection = kafkaoxide_db::connections::get(&state.pool, &id).await?;
+    Ok(state
+        .kafka
+        .fetch_consumer_group_lag(&connection, &group_id, None)
+        .await?)
+}

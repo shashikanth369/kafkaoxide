@@ -52,6 +52,7 @@ fn main() {
             commands::connections::connection_fetch_messages,
             commands::connections::connection_list_partitions,
             commands::connections::connection_describe_topic_config,
+            commands::connections::connection_fetch_consumer_group_lag,
             commands::tabs::tab_list,
             commands::tabs::tab_create,
             commands::tabs::tab_rename,
