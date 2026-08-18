@@ -5,7 +5,7 @@ import { ThemeSwitcher } from "./features/theme/ThemeSwitcher";
 import { TabBar } from "./features/tabs/TabBar";
 import { useTabsStore } from "./features/tabs/useTabsStore";
 import { ConnectionTree } from "./features/connections/ConnectionTree";
-import { ConnectionForm } from "./features/connections/ConnectionForm";
+import { ConnectionModal } from "./features/connections/modal/ConnectionModal";
 import { useCreateConnection } from "./features/connections/useConnections";
 import { BottomPanel } from "./features/bottom-panel/BottomPanel";
 import "./styles/themes.css";
@@ -14,7 +14,7 @@ import "./styles/global.css";
 const queryClient = new QueryClient();
 
 function AppShell() {
-  const [showForm, setShowForm] = useState(false);
+  const [showModal, setShowModal] = useState(false);
   const createConnection = useCreateConnection();
   const loadTabs = useTabsStore((s) => s.loadTabs);
 
@@ -30,16 +30,16 @@ function AppShell() {
       </header>
       <div className="app-body">
         <aside className="app-sidebar">
-          <button type="button" onClick={() => setShowForm(true)}>
-            + Add connection
+          <button type="button" onClick={() => setShowModal(true)}>
+            + New Connection
           </button>
-          {showForm && (
-            <ConnectionForm
-              submitLabel="Add connection"
-              onSubmit={async (connection) => {
+          {showModal && (
+            <ConnectionModal
+              onAdd={async (connection) => {
                 await createConnection.mutateAsync(connection);
-                setShowForm(false);
+                setShowModal(false);
               }}
+              onCancel={() => setShowModal(false)}
             />
           )}
           <ConnectionTree />

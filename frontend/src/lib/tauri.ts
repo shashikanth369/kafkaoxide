@@ -4,13 +4,46 @@ export type SecurityProtocol = "PLAINTEXT" | "SSL" | "SASL_PLAINTEXT" | "SASL_SS
 export type SaslMechanism = "PLAIN" | "SCRAM-SHA-256" | "SCRAM-SHA-512";
 export type ConnectionStatus = "UNKNOWN" | "REACHABLE" | "UNREACHABLE";
 
+/** Values for the General section's "Kafka cluster version" dropdown. */
+export const KAFKA_VERSIONS = [
+  "0.11",
+  "1.0",
+  "1.1",
+  "2.0",
+  "2.1",
+  "2.2",
+  "2.3",
+  "2.4",
+  "2.5",
+  "2.6",
+  "2.7",
+  "2.8",
+  "2.9",
+  "3.0",
+  "3.1",
+  "3.2",
+  "3.3",
+  "3.4",
+  "3.5",
+  "3.6",
+  "3.7",
+] as const;
+
 export interface Connection {
   id: string;
   name: string;
   bootstrapServers: string;
+  kafkaVersion: string;
+  zookeeperEnabled: boolean;
+  zookeeperHost: string | null;
+  zookeeperPort: number | null;
+  zookeeperChrootPath: string | null;
   securityProtocol: SecurityProtocol;
   saslMechanism: SaslMechanism | null;
-  saslUsername: string | null;
+  saslOauthUrl: string | null;
+  schemaRegistryEndpoint: string | null;
+  schemaRegistryTrustStoreLocation: string | null;
+  schemaRegistryKeystoreLocation: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -18,10 +51,21 @@ export interface Connection {
 export interface NewConnection {
   name: string;
   bootstrapServers: string;
+  kafkaVersion: string;
+  zookeeperEnabled: boolean;
+  zookeeperHost: string | null;
+  zookeeperPort: number | null;
+  zookeeperChrootPath: string | null;
   securityProtocol: SecurityProtocol;
   saslMechanism: SaslMechanism | null;
-  saslUsername: string | null;
-  saslPassword: string | null;
+  saslOauthUrl: string | null;
+  schemaRegistryEndpoint: string | null;
+  schemaRegistryBasicAuthCredentials: string | null;
+  schemaRegistryTrustStoreLocation: string | null;
+  schemaRegistryTrustStorePassword: string | null;
+  schemaRegistryKeystoreLocation: string | null;
+  schemaRegistryKeystorePassword: string | null;
+  schemaRegistryKeystoreKeyPassword: string | null;
 }
 
 export interface Tab {
@@ -39,6 +83,12 @@ export const api = {
   deleteConnection: (id: string) => invoke<void>("connection_delete", { id }),
   checkConnectionStatus: (id: string) =>
     invoke<ConnectionStatus>("connection_check_status", { id }),
+  pingBootstrapServers: (bootstrapServers: string) =>
+    invoke<ConnectionStatus>("connection_ping_bootstrap", { bootstrapServers }),
+  pingZookeeper: (host: string, port: number) =>
+    invoke<ConnectionStatus>("connection_ping_zookeeper", { host, port }),
+  testConnection: (newConnection: NewConnection) =>
+    invoke<ConnectionStatus>("connection_test", { newConnection }),
   listTabs: () => invoke<Tab[]>("tab_list"),
   createTab: (name: string) => invoke<Tab>("tab_create", { name }),
   renameTab: (id: string, name: string) => invoke<void>("tab_rename", { id, name }),

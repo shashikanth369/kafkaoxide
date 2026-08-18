@@ -24,6 +24,7 @@ fn main() {
                 handle.manage(AppState {
                     pool,
                     kafka: Arc::new(kafkaoxide_kafka::RdKafkaClient),
+                    zookeeper: Arc::new(kafkaoxide_kafka::TcpZookeeperClient),
                     secrets: Arc::new(kafkaoxide_secrets::KeyringSecretStore),
                 });
 
@@ -37,6 +38,9 @@ fn main() {
             commands::connections::connection_update,
             commands::connections::connection_delete,
             commands::connections::connection_check_status,
+            commands::connections::connection_ping_bootstrap,
+            commands::connections::connection_ping_zookeeper,
+            commands::connections::connection_test,
             commands::tabs::tab_list,
             commands::tabs::tab_create,
             commands::tabs::tab_rename,

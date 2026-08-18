@@ -1,5 +1,7 @@
 use crate::state::AppState;
 use kafkaoxide_core::{Connection, ConnectionStatus, NewConnection};
+use kafkaoxide_kafka::{KafkaClient, ZookeeperClient};
+use kafkaoxide_secrets::SecretStore;
 use tauri::{AppHandle, State};
 
 #[derive(serde::Serialize)]
@@ -15,6 +17,42 @@ impl From<error_stack::Report<kafkaoxide_core::AppError>> for CommandError {
     }
 }
 
+/// The New Connection modal's Schema Registry secret fields, each stored
+/// under its own keyed slot in the OS keychain (see
+/// `kafkaoxide_secrets::SecretStore`) rather than in the database.
+const SCHEMA_REGISTRY_SECRET_KEYS: [&str; 4] = [
+    "schema_registry_basic_auth_credentials",
+    "schema_registry_trust_store_password",
+    "schema_registry_keystore_password",
+    "schema_registry_keystore_key_password",
+];
+
+fn schema_registry_secret_values(new_connection: &NewConnection) -> [Option<&str>; 4] {
+    [
+        new_connection.schema_registry_basic_auth_credentials.as_deref(),
+        new_connection.schema_registry_trust_store_password.as_deref(),
+        new_connection.schema_registry_keystore_password.as_deref(),
+        new_connection.schema_registry_keystore_key_password.as_deref(),
+    ]
+}
+
+fn store_schema_registry_secrets(
+    state: &AppState,
+    connection_id: &str,
+    new_connection: &NewConnection,
+) -> Result<(), CommandError> {
+    for (key, value) in SCHEMA_REGISTRY_SECRET_KEYS
+        .iter()
+        .zip(schema_registry_secret_values(new_connection))
+    {
+        match value {
+            Some(value) => state.secrets.set_secret(connection_id, key, value)?,
+            None => state.secrets.delete_secret(connection_id, key)?,
+        }
+    }
+    Ok(())
+}
+
 #[tauri::command]
 pub async fn connection_list(state: State<'_, AppState>) -> Result<Vec<Connection>, CommandError> {
     Ok(kafkaoxide_db::connections::list(&state.pool).await?)
@@ -26,11 +64,8 @@ pub async fn connection_create(
     state: State<'_, AppState>,
     new_connection: NewConnection,
 ) -> Result<Connection, CommandError> {
-    let password = new_connection.sasl_password.clone();
     let connection = kafkaoxide_db::connections::create(&state.pool, &new_connection).await?;
-    if let Some(password) = password {
-        state.secrets.set_password(&connection.id, &password)?;
-    }
+    store_schema_registry_secrets(&state, &connection.id, &new_connection)?;
     crate::logging::emit_log(&app, "info", format!("Created connection \"{}\"", connection.name));
     Ok(connection)
 }
@@ -42,11 +77,8 @@ pub async fn connection_update(
     id: String,
     new_connection: NewConnection,
 ) -> Result<Connection, CommandError> {
-    let password = new_connection.sasl_password.clone();
     let connection = kafkaoxide_db::connections::update(&state.pool, &id, &new_connection).await?;
-    if let Some(password) = password {
-        state.secrets.set_password(&connection.id, &password)?;
-    }
+    store_schema_registry_secrets(&state, &connection.id, &new_connection)?;
     crate::logging::emit_log(&app, "info", format!("Updated connection \"{}\"", connection.name));
     Ok(connection)
 }
@@ -58,7 +90,9 @@ pub async fn connection_delete(
     id: String,
 ) -> Result<(), CommandError> {
     kafkaoxide_db::connections::delete(&state.pool, &id).await?;
-    state.secrets.delete_password(&id)?;
+    for key in SCHEMA_REGISTRY_SECRET_KEYS {
+        state.secrets.delete_secret(&id, key)?;
+    }
     crate::logging::emit_log(&app, "info", format!("Deleted connection {id}"));
     Ok(())
 }
@@ -69,6 +103,46 @@ pub async fn connection_check_status(
     id: String,
 ) -> Result<ConnectionStatus, CommandError> {
     let connection = kafkaoxide_db::connections::get(&state.pool, &id).await?;
-    let password = state.secrets.get_password(&id)?;
-    Ok(state.kafka.check_status(&connection, password.as_deref()).await?)
+    Ok(state.kafka.check_status(&connection, None).await?)
+}
+
+/// Backs the ping button next to "Bootstrap servers" in the New Connection
+/// modal's General section — a plaintext reachability probe of whatever the
+/// user has typed so far, independent of the Security tab.
+#[tauri::command]
+pub async fn connection_ping_bootstrap(
+    state: State<'_, AppState>,
+    bootstrap_servers: String,
+) -> Result<ConnectionStatus, CommandError> {
+    Ok(state.kafka.ping_bootstrap(&bootstrap_servers).await?)
+}
+
+/// Backs the ping button next to "Host" in the New Connection modal's
+/// Zookeeper section.
+#[tauri::command]
+pub async fn connection_ping_zookeeper(
+    state: State<'_, AppState>,
+    host: String,
+    port: u16,
+) -> Result<ConnectionStatus, CommandError> {
+    Ok(state.zookeeper.ping(&host, port).await)
+}
+
+/// Backs the New Connection modal's bottom "Test" button — tests
+/// connectivity using every value currently entered in the modal, without
+/// requiring the connection to be saved first.
+#[tauri::command]
+pub async fn connection_test(
+    state: State<'_, AppState>,
+    new_connection: NewConnection,
+) -> Result<ConnectionStatus, CommandError> {
+    Ok(state
+        .kafka
+        .test_connection(
+            &new_connection.bootstrap_servers,
+            new_connection.security_protocol,
+            new_connection.sasl_mechanism,
+            None,
+        )
+        .await?)
 }

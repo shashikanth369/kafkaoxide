@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { setInvokeHandlers } from "../../lib/testInvoke";
 import { useUpdateConnection } from "./useConnections";
-import type { NewConnection } from "../../lib/tauri";
+import { sampleNewConnection } from "./connectionTestFixtures";
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
 
@@ -15,14 +15,7 @@ function createWrapper() {
   );
 }
 
-const newConnection: NewConnection = {
-  name: "Local Kafka",
-  bootstrapServers: "localhost:9092",
-  securityProtocol: "PLAINTEXT",
-  saslMechanism: null,
-  saslUsername: null,
-  saslPassword: null,
-};
+const newConnection = sampleNewConnection();
 
 beforeEach(() => {
   vi.clearAllMocks();

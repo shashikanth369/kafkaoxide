@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { App } from "./App";
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
@@ -19,5 +20,24 @@ describe("App", () => {
     expect(await screen.findByText("No connections yet. Add one to get started.")).toBeInTheDocument();
     expect(screen.getByText("Select a topic to browse messages.")).toBeInTheDocument();
     expect(screen.getByLabelText("New tab")).toBeInTheDocument();
+  });
+
+  it("opens the New Connection modal when the sidebar button is clicked", async () => {
+    const { invoke } = await import("@tauri-apps/api/core");
+    vi.mocked(invoke).mockImplementation((command: string) => {
+      if (command === "tab_list") return Promise.resolve([]);
+      if (command === "connection_list") return Promise.resolve([]);
+      return Promise.reject(new Error(`unexpected command ${command}`));
+    });
+    const user = userEvent.setup();
+
+    render(<App />);
+    await screen.findByText("No connections yet. Add one to get started.");
+
+    expect(screen.queryByRole("dialog", { name: "New Connection" })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "+ New Connection" }));
+
+    expect(screen.getByRole("dialog", { name: "New Connection" })).toBeInTheDocument();
   });
 });
