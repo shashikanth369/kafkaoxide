@@ -104,6 +104,21 @@ export interface ConfigEntry {
   value: string | null;
 }
 
+export interface PartitionLag {
+  topic: string;
+  partition: number;
+  currentOffset: number | null;
+  logEndOffset: number;
+  lag: number | null;
+  clientId: string | null;
+  clientHost: string | null;
+}
+
+export interface ConsumerGroupLag {
+  state: string;
+  partitions: PartitionLag[];
+}
+
 /** All filter fields optional — an all-undefined filter pulls every message. `includePayload` defaults to false (metadata-only). */
 export interface MessageFilter {
   partitions: number[] | null;
@@ -153,6 +168,8 @@ export const api = {
     invoke<PartitionSummary[]>("connection_list_partitions", { id, topic }),
   describeTopicConfig: (id: string, topic: string) =>
     invoke<ConfigEntry[]>("connection_describe_topic_config", { id, topic }),
+  fetchConsumerGroupLag: (id: string, groupId: string) =>
+    invoke<ConsumerGroupLag>("connection_fetch_consumer_group_lag", { id, groupId }),
   listTabs: () => invoke<Tab[]>("tab_list"),
   createTab: (name: string) => invoke<Tab>("tab_create", { name }),
   renameTab: (id: string, name: string) => invoke<void>("tab_rename", { id, name }),

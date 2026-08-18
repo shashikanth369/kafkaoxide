@@ -1,5 +1,5 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { api, MessageFilter, TopicMessage } from "../../lib/tauri";
+import { api, ConsumerGroupLag, MessageFilter, TopicMessage } from "../../lib/tauri";
 
 /** Backs the tree's "Brokers" sub-list — fetched lazily, only once the category is expanded. */
 export function useBrokers(connectionId: string, enabled: boolean) {
@@ -55,5 +55,12 @@ export function useTopicConfig(connectionId: string, topic: string) {
   return useQuery({
     queryKey: ["topic-config", connectionId, topic],
     queryFn: () => api.describeTopicConfig(connectionId, topic),
+  });
+}
+
+/** Backs the consumer group detail panel's "Refresh" button. */
+export function useFetchConsumerGroupLag() {
+  return useMutation<ConsumerGroupLag, Error, { connectionId: string; groupId: string }>({
+    mutationFn: ({ connectionId, groupId }) => api.fetchConsumerGroupLag(connectionId, groupId),
   });
 }
