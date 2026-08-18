@@ -5,7 +5,7 @@ Worktree path: `.claude/worktrees/phase0-foundation`
 Plan: `docs/superpowers/plans/2026-08-18-phase0-foundation.md`
 Executing via: superpowers:subagent-driven-development (implementer → spec review → code-quality review per task)
 
-## Status: paused after Task 9, resume by fixing Task 9's code-quality findings, then continue to Task 10
+## Status: Task 9 fixed and approved. Proceeding through Task 10-12.
 
 ## Done (implemented, spec-reviewed ✅, code-quality reviewed)
 
@@ -19,20 +19,7 @@ Executing via: superpowers:subagent-driven-development (implementer → spec rev
 - **Task 8** — Tabs feature (`useTabsStore`, `TabBar`). Approved with minor notes, but reviewer flagged two **Important, deferred-not-fixed** items to revisit at Task 11 wiring time:
   - No error handling on `addTab`/`renameTab`/`loadTabs` — a failed mutation closes the rename box / does nothing on the "+" button with zero user feedback.
   - `role="tab"` divs have no keyboard operability (no `tabIndex`, no Enter/Space handler) — breaks the implicit ARIA tab-role contract.
-- **Task 9** — Connections feature (`ConnectionForm`, `ConnectionTree`, `useConnections`). **Spec-compliant ✅, but code-quality review returned "Needs changes"** — see below. Not yet fixed.
-
-## ⚠️ Next action: fix Task 9 before starting Task 10
-
-Code-quality review (commit "Add connection form and status-aware connection tree") returned **Needs changes**, in the same worktree/branch. Required fixes:
-
-1. **Mutation error swallowing** (repeats Task 8's flagged gap, now landing in the core MVP screen — fix at the source this time): `ConnectionForm.handleSubmit` calls `await onSubmit(...)` with no try/catch and no pending/disabled state on submit, so a failed `invoke` becomes a silent unhandled rejection with no user feedback and no protection against double-submit.
-2. **Inert ARIA tree roles**: `ConnectionTree`/`ConnectionRow` use `role="tree"`/`role="treeitem"` with zero keyboard behavior (no `tabIndex`, no arrow-key nav, no real `aria-selected`) — assistive tech announces semantics that don't work. Either implement minimal keyboard support or drop to plain markup until real tree interaction (topics/partitions, Phase 1) exists.
-3. **Missing `useUpdateConnection` hook**: `useConnections.ts` wraps create/delete/status but not update, even though `api.updateConnection` already exists in `lib/tauri.ts` and `ConnectionForm`'s `initial` prop clearly anticipates an edit flow. Add the mirrored hook.
-4. **`saslPassword` never cleared after successful submit** — if the form stays mounted post-submit, the plaintext password lingers in component state. Reset all fields (or at least `saslPassword`) after `onSubmit` resolves.
-
-Minor/optional (not blocking, noted for later): `autoComplete` on password/username inputs to reduce browser autofill heuristics; `useConnectionStatus`'s per-row 10s polling doesn't scale past a few dozen connections (fine for Phase 0); missing test coverage for the gray/UNKNOWN status case, validation-error-clears-on-retry, missing-bootstrapServers-only validation, and the `initial` prop (edit) path.
-
-**After fixing:** re-run the code-quality review (same pattern as other tasks — dispatch a fresh reviewer subagent, don't just self-certify) before marking Task 9 done and moving to Task 10.
+- **Task 9** — Connections feature (`ConnectionForm`, `ConnectionTree`, `useConnections`). Spec-compliant ✅. Code-quality review initially returned "Needs changes" (4 findings); fixed in commit `3100e02` (submit try/catch + pending/disabled state + visible error alert, `saslPassword` cleared only on success, `role="tree"`/`role="treeitem"` dropped in favor of plain `ul`/`li` + `data-testid`, added `useUpdateConnection` mirroring `useCreateConnection`). Independent re-review: **Approved** (verified `npm run test` 21/21 and `npx tsc --noEmit` clean independently, confirmed no leftover ARIA role dependencies, confirmed password preserved on failure/cleared on success).
 
 ## Not started
 
