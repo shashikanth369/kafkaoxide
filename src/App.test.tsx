@@ -1,10 +1,23 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { App } from "./App";
 
+vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
+vi.mock("@tauri-apps/api/event", () => ({ listen: vi.fn(() => Promise.resolve(() => {})) }));
+
 describe("App", () => {
-  it("renders", () => {
+  it("renders the shell with tab bar, sidebar, and bottom panel", async () => {
+    const { invoke } = await import("@tauri-apps/api/core");
+    vi.mocked(invoke).mockImplementation((command: string) => {
+      if (command === "tab_list") return Promise.resolve([]);
+      if (command === "connection_list") return Promise.resolve([]);
+      return Promise.reject(new Error(`unexpected command ${command}`));
+    });
+
     render(<App />);
-    expect(screen.getByText("kafkaoxide")).toBeInTheDocument();
+
+    expect(await screen.findByText("No connections yet. Add one to get started.")).toBeInTheDocument();
+    expect(screen.getByText("Select a topic to browse messages.")).toBeInTheDocument();
+    expect(screen.getByLabelText("New tab")).toBeInTheDocument();
   });
 });
