@@ -13,6 +13,15 @@ export function useCreateConnection() {
   });
 }
 
+export function useUpdateConnection() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, connection }: { id: string; connection: NewConnection }) =>
+      api.updateConnection(id, connection),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["connections"] }),
+  });
+}
+
 export function useDeleteConnection() {
   const queryClient = useQueryClient();
   return useMutation({

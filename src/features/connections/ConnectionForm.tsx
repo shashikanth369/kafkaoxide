@@ -20,6 +20,7 @@ export function ConnectionForm({ initial, onSubmit, submitLabel }: ConnectionFor
   const [saslUsername, setSaslUsername] = useState(initial?.saslUsername ?? "");
   const [saslPassword, setSaslPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const requiresSasl = securityProtocol === "SASL_PLAINTEXT" || securityProtocol === "SASL_SSL";
 
@@ -40,14 +41,22 @@ export function ConnectionForm({ initial, onSubmit, submitLabel }: ConnectionFor
       return;
     }
 
-    await onSubmit({
-      name: name.trim(),
-      bootstrapServers: bootstrapServers.trim(),
-      securityProtocol,
-      saslMechanism: requiresSasl && saslMechanism !== "" ? saslMechanism : null,
-      saslUsername: requiresSasl && saslUsername.trim().length > 0 ? saslUsername.trim() : null,
-      saslPassword: requiresSasl && saslPassword.length > 0 ? saslPassword : null,
-    });
+    setIsSubmitting(true);
+    try {
+      await onSubmit({
+        name: name.trim(),
+        bootstrapServers: bootstrapServers.trim(),
+        securityProtocol,
+        saslMechanism: requiresSasl && saslMechanism !== "" ? saslMechanism : null,
+        saslUsername: requiresSasl && saslUsername.trim().length > 0 ? saslUsername.trim() : null,
+        saslPassword: requiresSasl && saslPassword.length > 0 ? saslPassword : null,
+      });
+      setSaslPassword("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to save connection");
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -108,7 +117,9 @@ export function ConnectionForm({ initial, onSubmit, submitLabel }: ConnectionFor
         </>
       )}
       {error && <p role="alert">{error}</p>}
-      <button type="submit">{submitLabel}</button>
+      <button type="submit" disabled={isSubmitting}>
+        {submitLabel}
+      </button>
     </form>
   );
 }

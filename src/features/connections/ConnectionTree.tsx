@@ -10,10 +10,10 @@ function statusClass(status: ConnectionStatus): string {
 function ConnectionRow({ id, name }: { id: string; name: string }) {
   const { data: status } = useConnectionStatus(id);
   return (
-    <div className="connection-row" role="treeitem" aria-label={name}>
+    <li className="connection-row" data-testid={`connection-row-${id}`}>
       <span className={statusClass(status ?? "UNKNOWN")} data-testid={`status-${id}`} />
       <span>{name}</span>
-    </div>
+    </li>
   );
 }
 
@@ -29,10 +29,10 @@ export function ConnectionTree() {
   }
 
   return (
-    <div role="tree" aria-label="Connections">
+    <ul className="connection-tree" data-testid="connection-tree" aria-label="Connections">
       {connections.map((connection) => (
         <ConnectionRow key={connection.id} id={connection.id} name={connection.name} />
       ))}
-    </div>
+    </ul>
   );
 }
