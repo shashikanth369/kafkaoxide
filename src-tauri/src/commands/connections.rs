@@ -217,3 +217,15 @@ pub async fn connection_count_topic_messages(
     let connection = kafkaoxide_db::connections::get(&state.pool, &id).await?;
     Ok(state.kafka.count_topic_messages(&connection, &topic, None).await?)
 }
+
+/// Backs the topic Data tab's Play button.
+#[tauri::command]
+pub async fn connection_fetch_messages(
+    state: State<'_, AppState>,
+    id: String,
+    topic: String,
+    filter: kafkaoxide_core::MessageFilter,
+) -> Result<Vec<kafkaoxide_core::TopicMessage>, CommandError> {
+    let connection = kafkaoxide_db::connections::get(&state.pool, &id).await?;
+    Ok(state.kafka.fetch_messages(&connection, &topic, &filter, None).await?)
+}

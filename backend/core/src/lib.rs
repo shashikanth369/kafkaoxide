@@ -1,9 +1,11 @@
 mod cluster;
 mod connection;
 mod error;
+mod message;
 mod registry;
 
 pub use cluster::{BrokerSummary, ConsumerGroupSummary, TopicSummary};
+pub use message::{MessageFilter, TopicMessage};
 pub use connection::{
     Connection, ConnectionStatus, NewConnection, SaslMechanism, SecurityProtocol,
 };

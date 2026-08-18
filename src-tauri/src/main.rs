@@ -49,6 +49,7 @@ fn main() {
             commands::connections::connection_list_topics,
             commands::connections::connection_list_consumer_groups,
             commands::connections::connection_count_topic_messages,
+            commands::connections::connection_fetch_messages,
             commands::tabs::tab_list,
             commands::tabs::tab_create,
             commands::tabs::tab_rename,

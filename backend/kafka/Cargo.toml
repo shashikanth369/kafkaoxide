@@ -9,3 +9,4 @@ error-stack = { workspace = true }
 async-trait = { workspace = true }
 tokio = { workspace = true }
 rdkafka = { version = "0.36", features = ["cmake-build"] }
+base64 = "0.22"
