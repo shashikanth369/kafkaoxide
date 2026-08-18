@@ -1,4 +1,6 @@
 pub mod client;
 pub mod config;
+pub mod zookeeper;
 
 pub use client::{KafkaClient, RdKafkaClient};
+pub use zookeeper::{TcpZookeeperClient, ZookeeperClient};

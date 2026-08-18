@@ -32,41 +32,99 @@ pub enum SaslMechanism {
     ScramSha512,
 }
 
+/// A saved Kafka connection profile, as returned to the frontend. Never
+/// carries secrets (schema-registry credentials/passwords) — those live only
+/// in the OS keychain via `kafkaoxide_secrets::SecretStore`, keyed by
+/// connection id.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct Connection {
     pub id: String,
+    /// The "Cluster name" field in the New Connection modal's General section.
     pub name: String,
     pub bootstrap_servers: String,
+    pub kafka_version: String,
+    pub zookeeper_enabled: bool,
+    pub zookeeper_host: Option<String>,
+    pub zookeeper_port: Option<i64>,
+    pub zookeeper_chroot_path: Option<String>,
     pub security_protocol: SecurityProtocol,
     pub sasl_mechanism: Option<SaslMechanism>,
-    pub sasl_username: Option<String>,
+    pub sasl_oauth_url: Option<String>,
+    pub schema_registry_endpoint: Option<String>,
+    pub schema_registry_trust_store_location: Option<String>,
+    pub schema_registry_keystore_location: Option<String>,
     pub created_at: String,
     pub updated_at: String,
 }
 
+/// The full set of fields submitted from the New/Edit Connection modal,
+/// including secrets. Secret fields are stripped out before anything is
+/// persisted to the database (see `kafkaoxide_db::connections`) and are
+/// instead written to the OS keychain by the Tauri command layer.
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct NewConnection {
     pub name: String,
     pub bootstrap_servers: String,
+    pub kafka_version: String,
+    pub zookeeper_enabled: bool,
+    pub zookeeper_host: Option<String>,
+    pub zookeeper_port: Option<i64>,
+    pub zookeeper_chroot_path: Option<String>,
     pub security_protocol: SecurityProtocol,
     pub sasl_mechanism: Option<SaslMechanism>,
-    pub sasl_username: Option<String>,
-    pub sasl_password: Option<String>,
+    pub sasl_oauth_url: Option<String>,
+    pub schema_registry_endpoint: Option<String>,
+    pub schema_registry_basic_auth_credentials: Option<String>,
+    pub schema_registry_trust_store_location: Option<String>,
+    pub schema_registry_trust_store_password: Option<String>,
+    pub schema_registry_keystore_location: Option<String>,
+    pub schema_registry_keystore_password: Option<String>,
+    pub schema_registry_keystore_key_password: Option<String>,
 }
 
 impl fmt::Debug for NewConnection {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fn redacted(value: &Option<String>) -> Option<&'static str> {
+            value.as_ref().map(|_| "[redacted]")
+        }
+
         f.debug_struct("NewConnection")
             .field("name", &self.name)
             .field("bootstrap_servers", &self.bootstrap_servers)
+            .field("kafka_version", &self.kafka_version)
+            .field("zookeeper_enabled", &self.zookeeper_enabled)
+            .field("zookeeper_host", &self.zookeeper_host)
+            .field("zookeeper_port", &self.zookeeper_port)
+            .field("zookeeper_chroot_path", &self.zookeeper_chroot_path)
             .field("security_protocol", &self.security_protocol)
             .field("sasl_mechanism", &self.sasl_mechanism)
-            .field("sasl_username", &self.sasl_username)
+            .field("sasl_oauth_url", &self.sasl_oauth_url)
+            .field("schema_registry_endpoint", &self.schema_registry_endpoint)
             .field(
-                "sasl_password",
-                &self.sasl_password.as_ref().map(|_| "[redacted]"),
+                "schema_registry_basic_auth_credentials",
+                &redacted(&self.schema_registry_basic_auth_credentials),
+            )
+            .field(
+                "schema_registry_trust_store_location",
+                &self.schema_registry_trust_store_location,
+            )
+            .field(
+                "schema_registry_trust_store_password",
+                &redacted(&self.schema_registry_trust_store_password),
+            )
+            .field(
+                "schema_registry_keystore_location",
+                &self.schema_registry_keystore_location,
+            )
+            .field(
+                "schema_registry_keystore_password",
+                &redacted(&self.schema_registry_keystore_password),
+            )
+            .field(
+                "schema_registry_keystore_key_password",
+                &redacted(&self.schema_registry_keystore_key_password),
             )
             .finish()
     }
@@ -110,37 +168,80 @@ mod tests {
         }
     }
 
-    #[test]
-    fn connection_serializes_fields_as_camel_case() {
-        let connection = Connection {
+    fn sample_connection() -> Connection {
+        Connection {
             id: "1".into(),
             name: "Local".into(),
             bootstrap_servers: "localhost:9092".into(),
+            kafka_version: "3.7".into(),
+            zookeeper_enabled: false,
+            zookeeper_host: None,
+            zookeeper_port: None,
+            zookeeper_chroot_path: None,
             security_protocol: SecurityProtocol::Plaintext,
             sasl_mechanism: None,
-            sasl_username: None,
+            sasl_oauth_url: None,
+            schema_registry_endpoint: None,
+            schema_registry_trust_store_location: None,
+            schema_registry_keystore_location: None,
             created_at: "now".into(),
             updated_at: "now".into(),
-        };
-        let json = serde_json::to_string(&connection).unwrap();
-        assert!(json.contains("\"bootstrapServers\":\"localhost:9092\""));
-        assert!(json.contains("\"securityProtocol\":\"PLAINTEXT\""));
+        }
+    }
+
+    fn sample_new_connection() -> NewConnection {
+        NewConnection {
+            name: "Local".into(),
+            bootstrap_servers: "localhost:9092".into(),
+            kafka_version: "3.7".into(),
+            zookeeper_enabled: false,
+            zookeeper_host: None,
+            zookeeper_port: None,
+            zookeeper_chroot_path: None,
+            security_protocol: SecurityProtocol::Plaintext,
+            sasl_mechanism: None,
+            sasl_oauth_url: None,
+            schema_registry_endpoint: None,
+            schema_registry_basic_auth_credentials: None,
+            schema_registry_trust_store_location: None,
+            schema_registry_trust_store_password: None,
+            schema_registry_keystore_location: None,
+            schema_registry_keystore_password: None,
+            schema_registry_keystore_key_password: None,
+        }
     }
 
     #[test]
-    fn new_connection_debug_output_never_contains_the_real_password() {
-        let new_connection = NewConnection {
-            name: "Local".into(),
-            bootstrap_servers: "localhost:9092".into(),
-            security_protocol: SecurityProtocol::SaslSsl,
-            sasl_mechanism: Some(SaslMechanism::Plain),
-            sasl_username: Some("alice".into()),
-            sasl_password: Some("super-secret-value".into()),
-        };
+    fn connection_serializes_fields_as_camel_case() {
+        let connection = sample_connection();
+        let json = serde_json::to_string(&connection).unwrap();
+        assert!(json.contains("\"bootstrapServers\":\"localhost:9092\""));
+        assert!(json.contains("\"securityProtocol\":\"PLAINTEXT\""));
+        assert!(json.contains("\"kafkaVersion\":\"3.7\""));
+        assert!(json.contains("\"zookeeperEnabled\":false"));
+        assert!(json.contains("\"schemaRegistryEndpoint\":null"));
+    }
+
+    #[test]
+    fn new_connection_debug_output_never_contains_any_of_the_real_secrets() {
+        let mut new_connection = sample_new_connection();
+        new_connection.schema_registry_basic_auth_credentials = Some("user:super-secret-value".into());
+        new_connection.schema_registry_trust_store_password = Some("trust-store-secret".into());
+        new_connection.schema_registry_keystore_password = Some("keystore-secret".into());
+        new_connection.schema_registry_keystore_key_password = Some("keystore-key-secret".into());
 
         let debug_output = format!("{:?}", new_connection);
 
         assert!(!debug_output.contains("super-secret-value"));
-        assert!(debug_output.contains("[redacted]"));
+        assert!(!debug_output.contains("trust-store-secret"));
+        assert!(!debug_output.contains("keystore-secret"));
+        assert!(!debug_output.contains("keystore-key-secret"));
+        assert_eq!(debug_output.matches("[redacted]").count(), 4);
+    }
+
+    #[test]
+    fn new_connection_debug_output_shows_none_for_absent_secrets() {
+        let debug_output = format!("{:?}", sample_new_connection());
+        assert_eq!(debug_output.matches("[redacted]").count(), 0);
     }
 }

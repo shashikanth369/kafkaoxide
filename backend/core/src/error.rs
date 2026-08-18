@@ -7,6 +7,7 @@ pub enum AppError {
     Secrets,
     Validation,
     NotFound,
+    Zookeeper,
 }
 
 impl fmt::Display for AppError {
@@ -17,6 +18,7 @@ impl fmt::Display for AppError {
             AppError::Secrets => write!(f, "secrets store error"),
             AppError::Validation => write!(f, "validation error"),
             AppError::NotFound => write!(f, "not found"),
+            AppError::Zookeeper => write!(f, "zookeeper error"),
         }
     }
 }
@@ -31,5 +33,6 @@ mod tests {
     fn displays_a_human_readable_message_per_variant() {
         assert_eq!(AppError::Db.to_string(), "database error");
         assert_eq!(AppError::NotFound.to_string(), "not found");
+        assert_eq!(AppError::Zookeeper.to_string(), "zookeeper error");
     }
 }
