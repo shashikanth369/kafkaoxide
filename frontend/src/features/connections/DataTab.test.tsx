@@ -11,9 +11,17 @@ vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
 // Real AG Grid needs DOM measurement (ResizeObserver etc.) jsdom doesn't
 // fully provide; this test's job is to verify DataTab passes the right
 // rowData/onRowClicked, not to exercise AG Grid's own rendering.
-let lastGridProps: { rowData: unknown[]; onRowClicked: (event: { data: unknown }) => void } | null = null;
+let lastGridProps: {
+  rowData: unknown[];
+  onRowClicked: (event: { data: unknown }) => void;
+  quickFilterText?: string;
+} | null = null;
 vi.mock("ag-grid-react", () => ({
-  AgGridReact: (props: { rowData: unknown[]; onRowClicked: (event: { data: unknown }) => void }) => {
+  AgGridReact: (props: {
+    rowData: unknown[];
+    onRowClicked: (event: { data: unknown }) => void;
+    quickFilterText?: string;
+  }) => {
     lastGridProps = props;
     return null;
   },
@@ -48,7 +56,12 @@ describe("DataTab", () => {
     expect(screen.getByRole("button", { name: "Stop" })).toBeDisabled();
   });
 
-  it("fetches messages with an all-null filter when Play is clicked with no filters set", async () => {
+  it("shows a 'Load message payload' checkbox below Play/Stop, unchecked by default", () => {
+    renderWithClient(<DataTab connectionId="1" topicName="orders" />);
+    expect(screen.getByLabelText("Load message payload")).not.toBeChecked();
+  });
+
+  it("fetches messages with an all-null, no-payload filter when Play is clicked with no filters set", async () => {
     const fetchMessages = vi.fn(() => []);
     setInvokeHandlers({ connection_fetch_messages: fetchMessages });
     const user = userEvent.setup();
@@ -66,8 +79,25 @@ describe("DataTab", () => {
           maxTotalMessages: null,
           fromTimestampMs: null,
           toTimestampMs: null,
+          includePayload: false,
         },
       }),
+    );
+  });
+
+  it("sets includePayload true when the checkbox is checked before Play is clicked", async () => {
+    const fetchMessages = vi.fn(() => []);
+    setInvokeHandlers({ connection_fetch_messages: fetchMessages });
+    const user = userEvent.setup();
+    renderWithClient(<DataTab connectionId="1" topicName="orders" />);
+
+    await user.click(screen.getByLabelText("Load message payload"));
+    await user.click(screen.getByRole("button", { name: "Play" }));
+
+    await waitFor(() =>
+      expect(fetchMessages).toHaveBeenCalledWith(
+        expect.objectContaining({ filter: expect.objectContaining({ includePayload: true }) }),
+      ),
     );
   });
 
@@ -113,6 +143,20 @@ describe("DataTab", () => {
     await user.click(screen.getByRole("button", { name: "Play" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Failed to fetch messages");
+  });
+
+  it("shows a search input above the grid", () => {
+    renderWithClient(<DataTab connectionId="1" topicName="orders" />);
+    expect(screen.getByLabelText("Search messages")).toBeInTheDocument();
+  });
+
+  it("passes the search text to the grid as quickFilterText", async () => {
+    const user = userEvent.setup();
+    renderWithClient(<DataTab connectionId="1" topicName="orders" />);
+
+    await user.type(screen.getByLabelText("Search messages"), "order-1");
+
+    await waitFor(() => expect(lastGridProps?.quickFilterText).toBe("order-1"));
   });
 
   it("selects a message into the viewer store when a grid row is clicked", () => {

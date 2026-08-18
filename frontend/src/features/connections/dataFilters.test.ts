@@ -2,25 +2,32 @@ import { describe, expect, it } from "vitest";
 import { emptyFilterForm, toMessageFilter } from "./dataFilters";
 
 describe("emptyFilterForm", () => {
-  it("starts with every field blank", () => {
+  it("starts with every field blank and includePayload unchecked", () => {
     const form = emptyFilterForm();
     expect(form.maxMessagesPerPartition).toBe("");
     expect(form.maxTotalMessages).toBe("");
     expect(form.partitions).toBe("");
     expect(form.fromDate).toBe("");
     expect(form.toDate).toBe("");
+    expect(form.includePayload).toBe(false);
   });
 });
 
 describe("toMessageFilter", () => {
-  it("converts an all-blank form to an all-null filter (pull everything)", () => {
+  it("converts an all-blank form to an all-null, no-payload filter (pull everything, metadata only)", () => {
     expect(toMessageFilter(emptyFilterForm())).toEqual({
       partitions: null,
       maxMessagesPerPartition: null,
       maxTotalMessages: null,
       fromTimestampMs: null,
       toTimestampMs: null,
+      includePayload: false,
     });
+  });
+
+  it("carries includePayload through when checked", () => {
+    const form = { ...emptyFilterForm(), includePayload: true };
+    expect(toMessageFilter(form).includePayload).toBe(true);
   });
 
   it("parses maxMessagesPerPartition and maxTotalMessages as numbers", () => {

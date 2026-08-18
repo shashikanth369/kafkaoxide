@@ -406,7 +406,9 @@ impl KafkaClient for RdKafkaClient {
                             offset: borrowed.offset(),
                             timestamp_ms: borrowed.timestamp().to_millis(),
                             key: borrowed.key().map(|k| String::from_utf8_lossy(k).into_owned()),
-                            payload_base64: BASE64.encode(borrowed.payload().unwrap_or(&[])),
+                            payload_base64: filter
+                                .include_payload
+                                .then(|| BASE64.encode(borrowed.payload().unwrap_or(&[]))),
                         });
                         remaining.insert(partition, budget - 1);
                     }

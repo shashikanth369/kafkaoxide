@@ -28,6 +28,22 @@ describe("ClusterResourceTree", () => {
     expect(screen.getByTestId("category-Consumers")).toBeInTheDocument();
   });
 
+  it("eagerly fetches brokers, topics, and consumer groups on mount, without needing any category expanded first", async () => {
+    const listBrokers = vi.fn(() => []);
+    const listTopics = vi.fn(() => []);
+    const listConsumerGroups = vi.fn(() => []);
+    setInvokeHandlers({
+      connection_list_brokers: listBrokers,
+      connection_list_topics: listTopics,
+      connection_list_consumer_groups: listConsumerGroups,
+    });
+    renderWithClient(<ClusterResourceTree connectionId="1" />);
+
+    await waitFor(() => expect(listBrokers).toHaveBeenCalledWith({ id: "1" }));
+    await waitFor(() => expect(listTopics).toHaveBeenCalledWith({ id: "1" }));
+    await waitFor(() => expect(listConsumerGroups).toHaveBeenCalledWith({ id: "1" }));
+  });
+
   it("fetches and shows brokers once Brokers is expanded", async () => {
     const listBrokers = vi.fn(() => [{ id: 1, host: "broker1", port: 9092 }]);
     setInvokeHandlers({ connection_list_brokers: listBrokers });

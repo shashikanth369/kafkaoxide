@@ -42,6 +42,7 @@ export function DataTab({ connectionId, topicName }: DataTabProps) {
   const [messages, setMessages] = useState<TopicMessage[]>([]);
   const [isPlaying, setIsPlaying] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [searchText, setSearchText] = useState("");
   const fetchMessages = useFetchMessages();
   const viewMessage = useMessageViewerStore((s) => s.viewMessage);
   const stoppedRef = useRef(false);
@@ -126,6 +127,14 @@ export function DataTab({ connectionId, topicName }: DataTabProps) {
           ■ Stop
         </button>
       </div>
+      <label className="connection-modal-checkbox-label data-tab-include-payload">
+        <input
+          type="checkbox"
+          checked={form.includePayload}
+          onChange={(e) => updateForm({ includePayload: e.target.checked })}
+        />
+        Load message payload
+      </label>
 
       {error && (
         <p role="alert" className="connection-modal-error">
@@ -133,12 +142,22 @@ export function DataTab({ connectionId, topicName }: DataTabProps) {
         </p>
       )}
 
+      <label className="data-tab-search">
+        Search messages
+        <input
+          value={searchText}
+          onChange={(e) => setSearchText(e.target.value)}
+          placeholder="Search…"
+        />
+      </label>
+
       <div className="data-tab-grid" data-testid="message-grid">
         <AgGridReact<TopicMessage>
           theme={themeQuartz}
           rowData={messages}
           columnDefs={COLUMN_DEFS}
           defaultColDef={DEFAULT_COL_DEF}
+          quickFilterText={searchText}
           onRowClicked={(event) => {
             if (event.data) viewMessage(event.data);
           }}

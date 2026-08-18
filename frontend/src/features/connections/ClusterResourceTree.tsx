@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { BrokerSummary, ConsumerGroupSummary, TopicSummary } from "../../lib/tauri";
 import { useWorkspaceSelectionStore } from "../workspace/useWorkspaceSelectionStore";
 import { ResourceCategory } from "./ResourceCategory";
@@ -8,18 +7,19 @@ export interface ClusterResourceTreeProps {
   connectionId: string;
 }
 
+function noop() {}
+
 /**
- * The three lazily-loaded, searchable sub-lists shown once a cluster is
- * connected and its tree row is expanded.
+ * The three searchable sub-lists shown once a cluster is connected. Data is
+ * fetched eagerly as soon as this mounts (i.e. as soon as the cluster is
+ * connected — the parent ConnectionTree mounts this before the tree row is
+ * ever expanded, only hiding it visually via CSS), so expanding a category
+ * is instant instead of showing a spinner.
  */
 export function ClusterResourceTree({ connectionId }: ClusterResourceTreeProps) {
-  const [brokersRequested, setBrokersRequested] = useState(false);
-  const [topicsRequested, setTopicsRequested] = useState(false);
-  const [groupsRequested, setGroupsRequested] = useState(false);
-
-  const brokers = useBrokers(connectionId, brokersRequested);
-  const topics = useTopics(connectionId, topicsRequested);
-  const groups = useConsumerGroups(connectionId, groupsRequested);
+  const brokers = useBrokers(connectionId, true);
+  const topics = useTopics(connectionId, true);
+  const groups = useConsumerGroups(connectionId, true);
 
   const selection = useWorkspaceSelectionStore((s) => s.selection);
   const selectBroker = useWorkspaceSelectionStore((s) => s.selectBroker);
@@ -32,7 +32,7 @@ export function ClusterResourceTree({ connectionId }: ClusterResourceTreeProps) 
         label="Brokers"
         items={brokers.data}
         isLoading={brokers.isLoading}
-        onExpand={() => setBrokersRequested(true)}
+        onExpand={noop}
         getKey={(broker) => String(broker.id)}
         getLabel={(broker) => `${broker.id} — ${broker.host}:${broker.port}`}
         matchesSearch={(broker, query) =>
@@ -49,7 +49,7 @@ export function ClusterResourceTree({ connectionId }: ClusterResourceTreeProps) 
         label="Topics"
         items={topics.data}
         isLoading={topics.isLoading}
-        onExpand={() => setTopicsRequested(true)}
+        onExpand={noop}
         getKey={(topic) => topic.name}
         getLabel={(topic) => topic.name}
         matchesSearch={(topic, query) => topic.name.toLowerCase().includes(query.toLowerCase())}
@@ -64,7 +64,7 @@ export function ClusterResourceTree({ connectionId }: ClusterResourceTreeProps) 
         label="Consumers"
         items={groups.data}
         isLoading={groups.isLoading}
-        onExpand={() => setGroupsRequested(true)}
+        onExpand={noop}
         getKey={(group) => group.groupId}
         getLabel={(group) => group.groupId}
         matchesSearch={(group, query) => group.groupId.toLowerCase().includes(query.toLowerCase())}

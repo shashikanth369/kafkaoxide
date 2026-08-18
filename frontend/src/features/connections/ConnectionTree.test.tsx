@@ -147,11 +147,48 @@ describe("ConnectionTree", () => {
     await screen.findByText("Local Kafka");
     await waitFor(() => expect(isConnected).toHaveBeenCalled());
 
-    expect(screen.queryByTestId("resource-tree-1")).not.toBeInTheDocument();
     await user.click(await screen.findByRole("button", { name: "Expand Local Kafka" }));
 
-    expect(screen.getByTestId("resource-tree-1")).toBeInTheDocument();
+    expect(screen.getByTestId("resource-tree-1")).toBeVisible();
     expect(screen.getByTestId("category-Brokers")).toBeInTheDocument();
+  });
+
+  it("eagerly loads Brokers/Topics/Consumers data as soon as connected, before the row is ever expanded", async () => {
+    const isConnected = vi.fn(() => true);
+    const listBrokers = vi.fn(() => []);
+    const listTopics = vi.fn(() => []);
+    const listConsumerGroups = vi.fn(() => []);
+    setInvokeHandlers({
+      connection_list: () => [sampleConnection()],
+      connection_check_status: () => "REACHABLE",
+      connection_is_connected: isConnected,
+      connection_list_brokers: listBrokers,
+      connection_list_topics: listTopics,
+      connection_list_consumer_groups: listConsumerGroups,
+    });
+    renderWithClient(<ConnectionTree />);
+    await screen.findByText("Local Kafka");
+
+    await waitFor(() => expect(listBrokers).toHaveBeenCalled());
+    await waitFor(() => expect(listTopics).toHaveBeenCalled());
+    await waitFor(() => expect(listConsumerGroups).toHaveBeenCalled());
+  });
+
+  it("keeps the resource tree hidden (but mounted, already loading) until the row is expanded", async () => {
+    const isConnected = vi.fn(() => true);
+    setInvokeHandlers({
+      connection_list: () => [sampleConnection()],
+      connection_check_status: () => "REACHABLE",
+      connection_is_connected: isConnected,
+      connection_list_brokers: () => [],
+      connection_list_topics: () => [],
+      connection_list_consumer_groups: () => [],
+    });
+    renderWithClient(<ConnectionTree />);
+    await screen.findByText("Local Kafka");
+    await waitFor(() => expect(isConnected).toHaveBeenCalled());
+
+    expect(await screen.findByTestId("resource-tree-1")).not.toBeVisible();
   });
 
   it("clicking the expand toggle does not change the workspace selection", async () => {

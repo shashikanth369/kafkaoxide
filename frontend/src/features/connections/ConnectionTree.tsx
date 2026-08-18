@@ -49,8 +49,8 @@ function ConnectionRow({ id, name }: { id: string; name: string }) {
         <span className={statusClass(status ?? "UNKNOWN", connected)} data-testid={`status-${id}`} />
         <span>{name}</span>
       </li>
-      {connected && expanded && (
-        <li className="connection-row-children">
+      {connected && (
+        <li className="connection-row-children" style={expanded ? undefined : { display: "none" }}>
           <ClusterResourceTree connectionId={id} />
         </li>
       )}

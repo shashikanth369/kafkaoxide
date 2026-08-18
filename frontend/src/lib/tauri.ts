@@ -104,13 +104,14 @@ export interface ConfigEntry {
   value: string | null;
 }
 
-/** All fields optional — an all-undefined filter pulls every message. */
+/** All filter fields optional — an all-undefined filter pulls every message. `includePayload` defaults to false (metadata-only). */
 export interface MessageFilter {
   partitions: number[] | null;
   maxMessagesPerPartition: number | null;
   maxTotalMessages: number | null;
   fromTimestampMs: number | null;
   toTimestampMs: number | null;
+  includePayload: boolean;
 }
 
 export interface TopicMessage {
@@ -118,7 +119,8 @@ export interface TopicMessage {
   offset: number;
   timestampMs: number | null;
   key: string | null;
-  payloadBase64: string;
+  /** null unless the fetch's `includePayload` filter was set. */
+  payloadBase64: string | null;
 }
 
 export const api = {

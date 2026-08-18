@@ -12,6 +12,20 @@ export function MessagePayloadViewer() {
     return <p className="resizable-pane-placeholder">Select a message to view its payload.</p>;
   }
 
+  if (message.payloadBase64 === null) {
+    return (
+      <div className="message-payload-viewer">
+        <p className="message-payload-meta">
+          Partition {message.partition} · Offset {message.offset}
+          {message.key !== null && <> · Key: {message.key}</>}
+        </p>
+        <p className="resizable-pane-placeholder">
+          Payload wasn't loaded for this fetch — check "Load message payload" below Play, then Play again.
+        </p>
+      </div>
+    );
+  }
+
   const bytes = base64ToBytes(message.payloadBase64);
   const text = bytesToText(bytes);
   const avro = detectConfluentAvro(bytes);

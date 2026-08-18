@@ -65,6 +65,26 @@ describe("MessagePayloadViewer", () => {
     expect(screen.getByText(/schema id: 42/i)).toBeInTheDocument();
   });
 
+  it("shows a hint to enable 'Load message payload' when payloadBase64 is null", () => {
+    useMessageViewerStore.setState({
+      message: { partition: 0, offset: 1, timestampMs: null, key: null, payloadBase64: null },
+    });
+    render(<MessagePayloadViewer />);
+
+    expect(screen.getByText(/load message payload/i)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Text" })).not.toBeInTheDocument();
+  });
+
+  it("shows the message's partition and offset even when the payload wasn't loaded", () => {
+    useMessageViewerStore.setState({
+      message: { partition: 3, offset: 17, timestampMs: null, key: null, payloadBase64: null },
+    });
+    render(<MessagePayloadViewer />);
+
+    expect(screen.getByText(/partition 3/i)).toBeInTheDocument();
+    expect(screen.getByText(/offset 17/i)).toBeInTheDocument();
+  });
+
   it("shows the message's partition and offset", () => {
     useMessageViewerStore.setState({
       message: { partition: 3, offset: 17, timestampMs: null, key: null, payloadBase64: btoa("x") },

@@ -9,6 +9,8 @@ export interface FilterFormState {
   /** `<input type="datetime-local">` value. */
   fromDate: string;
   toDate: string;
+  /** The "Load message payload" checkbox below Play. */
+  includePayload: boolean;
 }
 
 export function emptyFilterForm(): FilterFormState {
@@ -18,6 +20,7 @@ export function emptyFilterForm(): FilterFormState {
     partitions: "",
     fromDate: "",
     toDate: "",
+    includePayload: false,
   };
 }
 
@@ -52,5 +55,6 @@ export function toMessageFilter(form: FilterFormState): MessageFilter {
     maxTotalMessages: parsePositiveInt(form.maxTotalMessages),
     fromTimestampMs: parseDate(form.fromDate),
     toTimestampMs: parseDate(form.toDate),
+    includePayload: form.includePayload,
   };
 }
