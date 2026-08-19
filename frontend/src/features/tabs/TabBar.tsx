@@ -102,7 +102,7 @@ export function TabBar() {
             </button>
           </div>
         )}
-        <button type="button" aria-label="New tab" onClick={() => addTab("New Tab")}>
+        <button type="button" className="tab-new" aria-label="New tab" onClick={() => addTab("New Tab")}>
           +
         </button>
       </div>
