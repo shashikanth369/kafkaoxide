@@ -176,4 +176,5 @@ export const api = {
   createTab: (name: string) => invoke<Tab>("tab_create", { name }),
   renameTab: (id: string, name: string) => invoke<void>("tab_rename", { id, name }),
   deleteTab: (id: string) => invoke<void>("tab_delete", { id }),
+  reorderTabs: (ids: string[]) => invoke<void>("tab_reorder", { ids }),
 };

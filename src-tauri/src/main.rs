@@ -57,6 +57,7 @@ fn main() {
             commands::tabs::tab_create,
             commands::tabs::tab_rename,
             commands::tabs::tab_delete,
+            commands::tabs::tab_reorder,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

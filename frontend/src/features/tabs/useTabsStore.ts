@@ -10,6 +10,10 @@ interface TabsState {
   renameTab: (id: string, name: string) => Promise<void>;
   deleteTab: (id: string) => Promise<void>;
   selectTab: (id: string) => void;
+  /** Local-only, live reorder while dragging a tab — moves `draggedId` to sit where `overId` currently is. */
+  moveTab: (draggedId: string, overId: string) => void;
+  /** Persists the current `tabs` order (call once, on drag end). */
+  commitTabOrder: () => Promise<void>;
 }
 
 function errorMessage(err: unknown, fallback: string): string {
@@ -68,4 +72,23 @@ export const useTabsStore = create<TabsState>((set, get) => ({
     }
   },
   selectTab: (id: string) => set({ activeTabId: id }),
+  moveTab: (draggedId: string, overId: string) => {
+    if (draggedId === overId) return;
+    set((state) => {
+      const fromIndex = state.tabs.findIndex((tab) => tab.id === draggedId);
+      const toIndex = state.tabs.findIndex((tab) => tab.id === overId);
+      if (fromIndex === -1 || toIndex === -1) return state;
+      const tabs = [...state.tabs];
+      const [dragged] = tabs.splice(fromIndex, 1);
+      tabs.splice(toIndex, 0, dragged);
+      return { tabs };
+    });
+  },
+  commitTabOrder: async () => {
+    try {
+      await api.reorderTabs(get().tabs.map((tab) => tab.id));
+    } catch (err) {
+      set({ error: errorMessage(err, "Failed to save tab order") });
+    }
+  },
 }));

@@ -76,6 +76,33 @@ pub async fn rename(pool: &SqlitePool, id: &str, name: &str) -> Result<(), AppEr
     Ok(())
 }
 
+/// Persists a new tab order — `ids` is the full, front-to-back list of tab
+/// ids after a drag-to-reorder. Each id's position becomes its index.
+pub async fn reorder(pool: &SqlitePool, ids: &[String]) -> Result<(), AppError> {
+    let mut tx = pool
+        .begin()
+        .await
+        .change_context(AppError::Db)
+        .attach_printable("failed to start transaction for tab reorder")?;
+
+    for (position, id) in ids.iter().enumerate() {
+        sqlx::query("UPDATE tabs SET position = ?1 WHERE id = ?2")
+            .bind(position as i64)
+            .bind(id)
+            .execute(&mut *tx)
+            .await
+            .change_context(AppError::Db)
+            .attach_printable_lazy(|| format!("failed to reposition tab {id}"))?;
+    }
+
+    tx.commit()
+        .await
+        .change_context(AppError::Db)
+        .attach_printable("failed to commit tab reorder transaction")?;
+
+    Ok(())
+}
+
 pub async fn delete(pool: &SqlitePool, id: &str) -> Result<(), AppError> {
     let result = sqlx::query("DELETE FROM tabs WHERE id = ?1")
         .bind(id)
@@ -145,6 +172,24 @@ mod tests {
         let pool = test_pool().await;
         let result = rename(&pool, "missing-id", "X").await;
         assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn reorders_tabs_by_the_given_id_order() {
+        let pool = test_pool().await;
+        let first = create(&pool, "First").await.unwrap();
+        let second = create(&pool, "Second").await.unwrap();
+        let third = create(&pool, "Third").await.unwrap();
+
+        reorder(&pool, &[third.id.clone(), first.id.clone(), second.id.clone()])
+            .await
+            .unwrap();
+
+        let tabs = list(&pool).await.unwrap();
+        assert_eq!(
+            tabs.iter().map(|t| t.name.clone()).collect::<Vec<_>>(),
+            vec!["Third", "First", "Second"]
+        );
     }
 
     #[tokio::test]

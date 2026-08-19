@@ -160,6 +160,29 @@ body {
 .bottom-panel-toggle:hover {
   color: var(--color-fg);
 }
+.bottom-panel-memory {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+.bottom-panel-memory-label {
+  font-size: 12px;
+  color: var(--color-fg-muted);
+}
+.bottom-panel-memory button {
+  background: none;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  color: var(--color-fg-muted);
+  font-size: 12px;
+  cursor: pointer;
+  padding: 2px 8px;
+}
+.bottom-panel-memory button:hover {
+  color: var(--color-fg);
+  border-color: var(--color-fg-muted);
+}
 .bottom-panel-content {
   height: 160px;
   overflow: auto;
@@ -223,6 +246,10 @@ body {
   background: var(--color-bg-elevated);
   color: var(--color-fg);
   border-color: var(--color-border);
+}
+.tab--dragging {
+  opacity: 0.6;
+  cursor: grabbing;
 }
 .tab-new {
   width: 28px;

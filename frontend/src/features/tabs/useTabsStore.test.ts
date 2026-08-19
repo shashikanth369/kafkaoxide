@@ -101,3 +101,65 @@ describe("useTabsStore deleteTab", () => {
     expect(useTabsStore.getState().error).toBe("delete failed");
   });
 });
+
+describe("useTabsStore moveTab", () => {
+  it("moves the dragged tab to sit where the target tab currently is, local-only", () => {
+    useTabsStore.setState({
+      tabs: [
+        { id: "1", name: "Alpha", position: 0 },
+        { id: "2", name: "Beta", position: 1 },
+        { id: "3", name: "Gamma", position: 2 },
+      ],
+      activeTabId: "1",
+    });
+
+    useTabsStore.getState().moveTab("1", "3");
+
+    expect(useTabsStore.getState().tabs.map((t) => t.id)).toEqual(["2", "3", "1"]);
+    expect(invoke).not.toHaveBeenCalledWith("tab_reorder", expect.anything());
+  });
+
+  it("is a no-op when dragging a tab onto itself", () => {
+    useTabsStore.setState({
+      tabs: [
+        { id: "1", name: "Alpha", position: 0 },
+        { id: "2", name: "Beta", position: 1 },
+      ],
+      activeTabId: "1",
+    });
+
+    useTabsStore.getState().moveTab("1", "1");
+
+    expect(useTabsStore.getState().tabs.map((t) => t.id)).toEqual(["1", "2"]);
+  });
+});
+
+describe("useTabsStore commitTabOrder", () => {
+  it("persists the current tab order via tab_reorder", async () => {
+    setInvokeHandlers({ tab_reorder: () => undefined });
+    useTabsStore.setState({
+      tabs: [
+        { id: "2", name: "Beta", position: 0 },
+        { id: "1", name: "Alpha", position: 1 },
+      ],
+      activeTabId: "1",
+    });
+
+    await useTabsStore.getState().commitTabOrder();
+
+    expect(invoke).toHaveBeenCalledWith("tab_reorder", { ids: ["2", "1"] });
+  });
+
+  it("sets an error when the backend call fails", async () => {
+    setInvokeHandlers({
+      tab_reorder: () => {
+        throw new Error("reorder failed");
+      },
+    });
+    useTabsStore.setState({ tabs: [{ id: "1", name: "Alpha", position: 0 }], activeTabId: "1" });
+
+    await useTabsStore.getState().commitTabOrder();
+
+    expect(useTabsStore.getState().error).toBe("reorder failed");
+  });
+});

@@ -26,3 +26,8 @@ pub async fn tab_rename(
 pub async fn tab_delete(state: State<'_, AppState>, id: String) -> Result<(), CommandError> {
     Ok(kafkaoxide_db::tabs::delete(&state.pool, &id).await?)
 }
+
+#[tauri::command]
+pub async fn tab_reorder(state: State<'_, AppState>, ids: Vec<String>) -> Result<(), CommandError> {
+    Ok(kafkaoxide_db::tabs::reorder(&state.pool, &ids).await?)
+}

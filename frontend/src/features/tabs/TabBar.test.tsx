@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { invoke } from "@tauri-apps/api/core";
 import { setInvokeHandlers } from "../../lib/testInvoke";
@@ -8,6 +8,13 @@ import { useSettingsPanelStore } from "../settings/useSettingsPanelStore";
 import { TabBar } from "./TabBar";
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
+
+function pointerEventAt(type: string, clientX: number): Event {
+  const event = new Event(type, { bubbles: true });
+  Object.defineProperty(event, "clientX", { value: clientX });
+  Object.defineProperty(event, "button", { value: 0 });
+  return event;
+}
 
 beforeEach(() => {
   useTabsStore.setState({ tabs: [], activeTabId: null, error: null });
@@ -215,5 +222,84 @@ describe("TabBar", () => {
     await user.click(screen.getByText("Alpha"));
 
     expect(useSettingsPanelStore.getState().isOpen).toBe(false);
+  });
+
+  it("opens rename editing via right-click on a tab", () => {
+    useTabsStore.setState({
+      tabs: [{ id: "1", name: "Alpha", position: 0 }],
+      activeTabId: "1",
+    });
+    render(<TabBar />);
+
+    fireEvent.contextMenu(screen.getByText("Alpha"));
+
+    expect(screen.getByLabelText("Rename tab Alpha")).toBeInTheDocument();
+  });
+
+  it("reorders tabs by dragging one past a neighbor, then persists the order on drop", async () => {
+    setInvokeHandlers({ tab_reorder: () => undefined });
+    useTabsStore.setState({
+      tabs: [
+        { id: "1", name: "Alpha", position: 0 },
+        { id: "2", name: "Beta", position: 1 },
+        { id: "3", name: "Gamma", position: 2 },
+      ],
+      activeTabId: "1",
+    });
+    render(<TabBar />);
+
+    const alpha = screen.getByRole("tab", { name: "Alpha" });
+    const beta = screen.getByRole("tab", { name: "Beta" });
+    const gamma = screen.getByRole("tab", { name: "Gamma" });
+    vi.spyOn(alpha, "getBoundingClientRect").mockReturnValue({ left: 0, right: 100 } as DOMRect);
+    vi.spyOn(beta, "getBoundingClientRect").mockReturnValue({ left: 100, right: 200 } as DOMRect);
+    vi.spyOn(gamma, "getBoundingClientRect").mockReturnValue({ left: 200, right: 300 } as DOMRect);
+
+    act(() => {
+      alpha.dispatchEvent(pointerEventAt("pointerdown", 10));
+    });
+    act(() => {
+      window.dispatchEvent(pointerEventAt("pointermove", 250));
+    });
+
+    expect(useTabsStore.getState().tabs.map((t) => t.id)).toEqual(["2", "3", "1"]);
+
+    act(() => {
+      window.dispatchEvent(pointerEventAt("pointerup", 250));
+    });
+
+    await waitFor(() => expect(invoke).toHaveBeenCalledWith("tab_reorder", { ids: ["2", "3", "1"] }));
+  });
+
+  it("does not select a different tab as the side effect of a drag-to-reorder", async () => {
+    setInvokeHandlers({ tab_reorder: () => undefined });
+    useTabsStore.setState({
+      tabs: [
+        { id: "1", name: "Alpha", position: 0 },
+        { id: "2", name: "Beta", position: 1 },
+      ],
+      activeTabId: "1",
+    });
+    render(<TabBar />);
+
+    const alpha = screen.getByRole("tab", { name: "Alpha" });
+    const beta = screen.getByRole("tab", { name: "Beta" });
+    vi.spyOn(alpha, "getBoundingClientRect").mockReturnValue({ left: 0, right: 100 } as DOMRect);
+    vi.spyOn(beta, "getBoundingClientRect").mockReturnValue({ left: 100, right: 200 } as DOMRect);
+
+    act(() => {
+      alpha.dispatchEvent(pointerEventAt("pointerdown", 10));
+    });
+    act(() => {
+      window.dispatchEvent(pointerEventAt("pointermove", 150));
+    });
+    act(() => {
+      window.dispatchEvent(pointerEventAt("pointerup", 150));
+      // The pointerup lands over Beta's position — a real drag-release would
+      // fire a native click on whatever element is now under the pointer.
+      fireEvent.click(beta);
+    });
+
+    expect(useTabsStore.getState().activeTabId).toBe("1");
   });
 });
