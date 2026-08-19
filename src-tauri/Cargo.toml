@@ -17,5 +17,3 @@ serde = { workspace = true }
 chrono = { workspace = true }
 error-stack = { workspace = true }
 sqlx = { version = "0.8", features = ["sqlite", "runtime-tokio"] }
-uuid = { workspace = true }
-open = { workspace = true }

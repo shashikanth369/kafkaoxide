@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { invoke } from "@tauri-apps/api/core";
 import { setInvokeHandlers } from "../../lib/testInvoke";
 import { useTabsStore } from "./useTabsStore";
+import { useJsonViewerTabsStore } from "./useJsonViewerTabsStore";
 import { useSettingsPanelStore } from "../settings/useSettingsPanelStore";
 import { TabBar } from "./TabBar";
 
@@ -18,6 +19,7 @@ function pointerEventAt(type: string, clientX: number): Event {
 
 beforeEach(() => {
   useTabsStore.setState({ tabs: [], activeTabId: null, error: null });
+  useJsonViewerTabsStore.setState({ tabs: [] });
   useSettingsPanelStore.setState({ isOpen: false });
 });
 
@@ -301,5 +303,57 @@ describe("TabBar", () => {
     });
 
     expect(useTabsStore.getState().activeTabId).toBe("1");
+  });
+
+  describe("ephemeral JSON viewer tabs", () => {
+    it("renders a JSON viewer tab alongside the regular tabs and selects it on click", async () => {
+      useTabsStore.setState({
+        tabs: [{ id: "1", name: "Alpha", position: 0 }],
+        activeTabId: "1",
+      });
+      const jsonId = useJsonViewerTabsStore.getState().openTab("Partition 0 · Offset 1", { a: 1 });
+      const user = userEvent.setup();
+      render(<TabBar />);
+
+      await user.click(screen.getByRole("tab", { name: "Partition 0 · Offset 1" }));
+
+      expect(useTabsStore.getState().activeTabId).toBe(jsonId);
+    });
+
+    it("closes a JSON viewer tab via its close button, without touching the persisted tabs", async () => {
+      useTabsStore.setState({
+        tabs: [{ id: "1", name: "Alpha", position: 0 }],
+        activeTabId: "1",
+      });
+      useJsonViewerTabsStore.getState().openTab("Partition 0 · Offset 1", { a: 1 });
+      const user = userEvent.setup();
+      render(<TabBar />);
+
+      await user.click(screen.getByLabelText("Close tab Partition 0 · Offset 1"));
+
+      expect(useJsonViewerTabsStore.getState().tabs).toHaveLength(0);
+      expect(useTabsStore.getState().tabs).toHaveLength(1);
+      // It wasn't the active tab, so closing it doesn't change activeTabId.
+      expect(useTabsStore.getState().activeTabId).toBe("1");
+    });
+
+    it("falls back to the last persisted tab when closing the active JSON viewer tab", async () => {
+      useTabsStore.setState({
+        tabs: [
+          { id: "1", name: "Alpha", position: 0 },
+          { id: "2", name: "Beta", position: 1 },
+        ],
+        activeTabId: "1",
+      });
+      const jsonId = useJsonViewerTabsStore.getState().openTab("Partition 0 · Offset 1", { a: 1 });
+      useTabsStore.setState({ activeTabId: jsonId });
+      const user = userEvent.setup();
+      render(<TabBar />);
+
+      await user.click(screen.getByLabelText("Close tab Partition 0 · Offset 1"));
+
+      expect(useJsonViewerTabsStore.getState().tabs).toHaveLength(0);
+      expect(useTabsStore.getState().activeTabId).toBe("2");
+    });
   });
 });

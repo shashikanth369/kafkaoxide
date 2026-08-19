@@ -1,5 +1,6 @@
 import { KeyboardEvent, PointerEvent as ReactPointerEvent, useEffect, useRef, useState } from "react";
 import { useTabsStore } from "./useTabsStore";
+import { useJsonViewerTabsStore } from "./useJsonViewerTabsStore";
 import { useSettingsPanelStore } from "../settings/useSettingsPanelStore";
 
 export function TabBar() {
@@ -12,6 +13,8 @@ export function TabBar() {
   const deleteTab = useTabsStore((s) => s.deleteTab);
   const moveTab = useTabsStore((s) => s.moveTab);
   const commitTabOrder = useTabsStore((s) => s.commitTabOrder);
+  const jsonTabs = useJsonViewerTabsStore((s) => s.tabs);
+  const closeJsonTab = useJsonViewerTabsStore((s) => s.closeTab);
   const settingsOpen = useSettingsPanelStore((s) => s.isOpen);
   const closeSettings = useSettingsPanelStore((s) => s.close);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -96,6 +99,16 @@ export function TabBar() {
     }
   }
 
+  // Ephemeral JSON viewer tabs aren't in useTabsStore, so closing one can't
+  // reuse deleteTab's own fallback-selection logic — fall back to the last
+  // real (persisted) tab instead, same "closed tab's neighbor" idea.
+  function handleCloseJsonTab(id: string) {
+    closeJsonTab(id);
+    if (activeTabId === id) {
+      useTabsStore.setState({ activeTabId: tabs[tabs.length - 1]?.id ?? null });
+    }
+  }
+
   return (
     <div className="tab-bar-region">
       <div className="tab-bar" role="tablist">
@@ -147,6 +160,31 @@ export function TabBar() {
                 </button>
               </>
             )}
+          </div>
+        ))}
+        {jsonTabs.map((tab) => (
+          <div
+            key={tab.id}
+            role="tab"
+            aria-label={tab.title}
+            aria-selected={tab.id === activeTabId && !settingsOpen}
+            tabIndex={0}
+            className="tab"
+            onClick={() => handleTabClick(tab.id)}
+            onKeyDown={(e) => handleTabKeyDown(e, tab.id)}
+          >
+            <span>{tab.title}</span>
+            <button
+              type="button"
+              className="tab-close"
+              aria-label={`Close tab ${tab.title}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleCloseJsonTab(tab.id);
+              }}
+            >
+              ×
+            </button>
           </div>
         ))}
         {settingsOpen && (

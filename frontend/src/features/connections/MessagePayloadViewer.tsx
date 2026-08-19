@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { JsonTreeView } from "../../components/JsonTreeView";
+import { useJsonViewerTabsStore } from "../tabs/useJsonViewerTabsStore";
+import { useTabsStore } from "../tabs/useTabsStore";
 import { useMessageViewerStore } from "../workspace/useMessageViewerStore";
 import { base64ToBytes, bytesToText, detectConfluentAvro, tryParseJson } from "./payloadDecoding";
 
@@ -13,6 +15,8 @@ const PANEL_TABS: { id: PanelTabId; label: string }[] = [
 
 export function MessagePayloadViewer() {
   const message = useMessageViewerStore((s) => s.message);
+  const openJsonTab = useJsonViewerTabsStore((s) => s.openTab);
+  const selectTab = useTabsStore((s) => s.selectTab);
   const [activeTab, setActiveTab] = useState<PanelTabId>("value");
   const [mode, setMode] = useState<ValueMode>("text");
 
@@ -104,7 +108,13 @@ export function MessagePayloadViewer() {
               {mode === "text" && <pre className="message-payload-body">{text}</pre>}
               {mode === "json" &&
                 (json !== undefined ? (
-                  <JsonTreeView value={json} />
+                  <JsonTreeView
+                    value={json}
+                    onOpenInNewTab={() => {
+                      const title = `Partition ${message.partition} · Offset ${message.offset}`;
+                      selectTab(openJsonTab(title, json));
+                    }}
+                  />
                 ) : (
                   <p role="alert">Payload is not valid JSON.</p>
                 ))}

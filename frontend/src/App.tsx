@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import { ThemeProvider } from "./features/theme/ThemeProvider";
 import { TabBar } from "./features/tabs/TabBar";
 import { useTabsStore } from "./features/tabs/useTabsStore";
+import { useJsonViewerTabsStore } from "./features/tabs/useJsonViewerTabsStore";
+import { JsonViewerTabPanel } from "./features/tabs/JsonViewerTabPanel";
 import { ConnectionTree } from "./features/connections/ConnectionTree";
 import { ConnectionModal } from "./features/connections/modal/ConnectionModal";
 import { ConnectionDraft, connectionToDraft } from "./features/connections/modal/draft";
@@ -42,6 +44,7 @@ function AppShell() {
   }
   const loadTabs = useTabsStore((s) => s.loadTabs);
   const activeTabId = useTabsStore((s) => s.activeTabId);
+  const activeJsonTab = useJsonViewerTabsStore((s) => s.tabs.find((tab) => tab.id === activeTabId));
   const selection = useWorkspaceSelectionStore((s) => s.selection);
   const setSelectionActiveTab = useWorkspaceSelectionStore((s) => s.setActiveTab);
   const settingsOpen = useSettingsPanelStore((s) => s.isOpen);
@@ -94,24 +97,30 @@ function AppShell() {
               <SettingsPanel />
             ) : (
               <main className="app-main" key={activeTabId ?? "no-tab"}>
-                {selection?.type === "connection" && <ClusterDetailPanel connectionId={selection.id} />}
-                {selection?.type === "broker" && (
-                  <BrokerDetailPanel connectionId={selection.connectionId} brokerId={selection.brokerId} />
+                {activeJsonTab ? (
+                  <JsonViewerTabPanel tab={activeJsonTab} />
+                ) : (
+                  <>
+                    {selection?.type === "connection" && <ClusterDetailPanel connectionId={selection.id} />}
+                    {selection?.type === "broker" && (
+                      <BrokerDetailPanel connectionId={selection.connectionId} brokerId={selection.brokerId} />
+                    )}
+                    {selection?.type === "topic" && (
+                      <TopicDetailPanel connectionId={selection.connectionId} topicName={selection.topicName} />
+                    )}
+                    {selection?.type === "partition" && (
+                      <PartitionDetailPanel
+                        connectionId={selection.connectionId}
+                        topicName={selection.topicName}
+                        partitionId={selection.partitionId}
+                      />
+                    )}
+                    {selection?.type === "consumerGroup" && (
+                      <ConsumerGroupDetailPanel connectionId={selection.connectionId} groupId={selection.groupId} />
+                    )}
+                    {!selection && <p className="app-main-placeholder">Select a cluster, broker, or topic.</p>}
+                  </>
                 )}
-                {selection?.type === "topic" && (
-                  <TopicDetailPanel connectionId={selection.connectionId} topicName={selection.topicName} />
-                )}
-                {selection?.type === "partition" && (
-                  <PartitionDetailPanel
-                    connectionId={selection.connectionId}
-                    topicName={selection.topicName}
-                    partitionId={selection.partitionId}
-                  />
-                )}
-                {selection?.type === "consumerGroup" && (
-                  <ConsumerGroupDetailPanel connectionId={selection.connectionId} groupId={selection.groupId} />
-                )}
-                {!selection && <p className="app-main-placeholder">Select a cluster, broker, or topic.</p>}
               </main>
             )
           }

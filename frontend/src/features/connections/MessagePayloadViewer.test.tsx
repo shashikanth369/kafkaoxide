@@ -1,11 +1,15 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useJsonViewerTabsStore } from "../tabs/useJsonViewerTabsStore";
+import { useTabsStore } from "../tabs/useTabsStore";
 import { useMessageViewerStore } from "../workspace/useMessageViewerStore";
 import { MessagePayloadViewer } from "./MessagePayloadViewer";
 
 beforeEach(() => {
   useMessageViewerStore.setState({ message: null });
+  useJsonViewerTabsStore.setState({ tabs: [] });
+  useTabsStore.setState({ tabs: [], activeTabId: null, error: null });
 });
 
 describe("MessagePayloadViewer", () => {
@@ -41,6 +45,29 @@ describe("MessagePayloadViewer", () => {
 
     expect(screen.getByText("id:")).toBeInTheDocument();
     expect(screen.getByText('"orders"')).toBeInTheDocument();
+  });
+
+  it("opens the JSON value as its own app tab and switches to it when 'Open in new tab' is clicked", async () => {
+    useMessageViewerStore.setState({
+      message: {
+        partition: 2,
+        offset: 7,
+        timestampMs: null,
+        key: null,
+        payloadBase64: btoa('{"id":1}'),
+        headers: [],
+      },
+    });
+    const user = userEvent.setup();
+    render(<MessagePayloadViewer />);
+
+    await user.click(screen.getByRole("button", { name: "JSON" }));
+    await user.click(screen.getByRole("button", { name: "Open in new tab" }));
+
+    const tabs = useJsonViewerTabsStore.getState().tabs;
+    expect(tabs).toHaveLength(1);
+    expect(tabs[0]).toMatchObject({ title: "Partition 2 · Offset 7", value: { id: 1 } });
+    expect(useTabsStore.getState().activeTabId).toBe(tabs[0].id);
   });
 
   it("shows an error message when JSON is requested but the payload isn't valid JSON", async () => {

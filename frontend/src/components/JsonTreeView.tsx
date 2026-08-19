@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { api } from "../lib/tauri";
 
 export interface JsonTreeViewProps {
   value: unknown;
+  /** Opens `value` as its own tab in the app (there's no browser to open a real new tab in). */
+  onOpenInNewTab: () => void;
 }
 
 function CopyIcon() {
@@ -116,19 +117,15 @@ function JsonNode({ label, value, depth }: JsonNodeProps) {
  * A collapsible, syntax-highlighted JSON tree — every object/array node gets
  * an expand/collapse arrow. The toolbar has two icon buttons (label shown
  * on hover): copy the whole pretty-printed value to the clipboard, or open
- * it in a standalone viewer tab in the system browser.
+ * it in its own tab in the app.
  */
-export function JsonTreeView({ value }: JsonTreeViewProps) {
+export function JsonTreeView({ value, onOpenInNewTab }: JsonTreeViewProps) {
   const [copied, setCopied] = useState(false);
 
   async function handleCopy() {
     await navigator.clipboard.writeText(JSON.stringify(value, null, 2));
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
-  }
-
-  function handleOpenInNewTab() {
-    void api.openJsonViewer(JSON.stringify(value, null, 2));
   }
 
   return (
@@ -139,7 +136,7 @@ export function JsonTreeView({ value }: JsonTreeViewProps) {
           className="json-tree-icon-button"
           title="Open in new tab"
           aria-label="Open in new tab"
-          onClick={handleOpenInNewTab}
+          onClick={onOpenInNewTab}
         >
           <ExternalLinkIcon />
         </button>
