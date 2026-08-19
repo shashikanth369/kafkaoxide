@@ -17,7 +17,7 @@ use std::time::Duration;
 
 use crate::assignment::decode_consumer_protocol_assignment;
 use crate::config::{build_client_config, client_config};
-use crate::messages::{apply_total_cap, partition_limits};
+use crate::messages::{apply_total_cap, clamp_offset, partition_limits};
 
 const METADATA_TIMEOUT: Duration = Duration::from_secs(5);
 
@@ -360,7 +360,12 @@ impl KafkaClient for RdKafkaClient {
                     .attach_printable_lazy(|| format!("failed to fetch watermarks for {topic}:{partition}"))
             };
 
-            let start_offsets: BTreeMap<i32, i64> = if let Some(from_ms) = filter.from_timestamp_ms {
+            let start_offsets: BTreeMap<i32, i64> = if let Some(from_offset) = filter.from_offset {
+                target_partitions
+                    .iter()
+                    .map(|&p| watermarks(p).map(|(low, high)| (p, clamp_offset(from_offset, low, high))))
+                    .collect::<Result<_, _>>()?
+            } else if let Some(from_ms) = filter.from_timestamp_ms {
                 resolve_offsets_by_timestamp(&consumer, &topic, &target_partitions, from_ms, |p| {
                     watermarks(p).map(|(low, _)| low)
                 })?
@@ -371,7 +376,12 @@ impl KafkaClient for RdKafkaClient {
                     .collect::<Result<_, _>>()?
             };
 
-            let end_offsets: BTreeMap<i32, i64> = if let Some(to_ms) = filter.to_timestamp_ms {
+            let end_offsets: BTreeMap<i32, i64> = if let Some(to_offset) = filter.to_offset {
+                target_partitions
+                    .iter()
+                    .map(|&p| watermarks(p).map(|(low, high)| (p, clamp_offset(to_offset, low, high))))
+                    .collect::<Result<_, _>>()?
+            } else if let Some(to_ms) = filter.to_timestamp_ms {
                 resolve_offsets_by_timestamp(&consumer, &topic, &target_partitions, to_ms, |p| {
                     watermarks(p).map(|(_, high)| high)
                 })?

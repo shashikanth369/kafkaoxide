@@ -21,6 +21,14 @@ pub fn partition_limits(
         .collect()
 }
 
+/// Clamps a caller-provided `fromOffset`/`toOffset` into a partition's
+/// `[low, high]` watermark range — Kafka rejects an assign at an offset
+/// outside that range, so a stale or out-of-range value degrades to the
+/// nearest valid boundary instead of erroring the whole fetch.
+pub fn clamp_offset(offset: i64, low: i64, high: i64) -> i64 {
+    offset.clamp(low, high)
+}
+
 /// Applies an overall `max_total_messages` cap across the already
 /// per-partition-capped limits, preserving relative partition order and
 /// truncating whichever partitions come last once the total is exhausted.
@@ -100,5 +108,20 @@ mod tests {
     fn apply_total_cap_drops_later_partitions_once_exhausted() {
         let limits = map(&[(0, 10), (1, 20)]);
         assert_eq!(apply_total_cap(&limits, Some(10)), map(&[(0, 10)]));
+    }
+
+    #[test]
+    fn clamp_offset_passes_through_a_value_already_in_range() {
+        assert_eq!(clamp_offset(50, 0, 100), 50);
+    }
+
+    #[test]
+    fn clamp_offset_clamps_a_value_below_the_low_watermark() {
+        assert_eq!(clamp_offset(-5, 10, 100), 10);
+    }
+
+    #[test]
+    fn clamp_offset_clamps_a_value_above_the_high_watermark() {
+        assert_eq!(clamp_offset(500, 10, 100), 100);
     }
 }

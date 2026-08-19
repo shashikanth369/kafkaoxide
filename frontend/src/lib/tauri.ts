@@ -126,6 +126,8 @@ export interface MessageFilter {
   maxTotalMessages: number | null;
   fromTimestampMs: number | null;
   toTimestampMs: number | null;
+  fromOffset: number | null;
+  toOffset: number | null;
   includePayload: boolean;
 }
 

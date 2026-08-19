@@ -39,7 +39,7 @@ beforeEach(() => {
 });
 
 describe("DataTab", () => {
-  it("renders Play and Stop controls, and all five filter inputs", () => {
+  it("renders Play and Stop controls, and all seven filter inputs", () => {
     renderWithClient(<DataTab connectionId="1" topicName="orders" />);
 
     expect(screen.getByRole("button", { name: "Play" })).toBeInTheDocument();
@@ -49,6 +49,8 @@ describe("DataTab", () => {
     expect(screen.getByLabelText("Partition filter")).toBeInTheDocument();
     expect(screen.getByLabelText("From")).toBeInTheDocument();
     expect(screen.getByLabelText("To")).toBeInTheDocument();
+    expect(screen.getByLabelText("From offset")).toBeInTheDocument();
+    expect(screen.getByLabelText("To offset")).toBeInTheDocument();
   });
 
   it("starts with Stop disabled, since nothing is playing yet", () => {
@@ -79,6 +81,8 @@ describe("DataTab", () => {
           maxTotalMessages: null,
           fromTimestampMs: null,
           toTimestampMs: null,
+          fromOffset: null,
+          toOffset: null,
           includePayload: false,
         },
       }),
@@ -115,6 +119,25 @@ describe("DataTab", () => {
       expect(fetchMessages).toHaveBeenCalledWith(
         expect.objectContaining({
           filter: expect.objectContaining({ maxMessagesPerPartition: 10, partitions: [0, 1] }),
+        }),
+      ),
+    );
+  });
+
+  it("applies the offset filters when Play is clicked", async () => {
+    const fetchMessages = vi.fn(() => []);
+    setInvokeHandlers({ connection_fetch_messages: fetchMessages });
+    const user = userEvent.setup();
+    renderWithClient(<DataTab connectionId="1" topicName="orders" />);
+
+    await user.type(screen.getByLabelText("From offset"), "100");
+    await user.type(screen.getByLabelText("To offset"), "200");
+    await user.click(screen.getByRole("button", { name: "Play" }));
+
+    await waitFor(() =>
+      expect(fetchMessages).toHaveBeenCalledWith(
+        expect.objectContaining({
+          filter: expect.objectContaining({ fromOffset: 100, toOffset: 200 }),
         }),
       ),
     );

@@ -9,6 +9,8 @@ describe("emptyFilterForm", () => {
     expect(form.partitions).toBe("");
     expect(form.fromDate).toBe("");
     expect(form.toDate).toBe("");
+    expect(form.fromOffset).toBe("");
+    expect(form.toOffset).toBe("");
     expect(form.includePayload).toBe(false);
   });
 });
@@ -21,6 +23,8 @@ describe("toMessageFilter", () => {
       maxTotalMessages: null,
       fromTimestampMs: null,
       toTimestampMs: null,
+      fromOffset: null,
+      toOffset: null,
       includePayload: false,
     });
   });
@@ -52,5 +56,12 @@ describe("toMessageFilter", () => {
   it("ignores an empty partitions string rather than producing [NaN]", () => {
     const form = { ...emptyFilterForm(), partitions: "   " };
     expect(toMessageFilter(form).partitions).toBeNull();
+  });
+
+  it("parses fromOffset and toOffset as numbers", () => {
+    const form = { ...emptyFilterForm(), fromOffset: "100", toOffset: "200" };
+    const filter = toMessageFilter(form);
+    expect(filter.fromOffset).toBe(100);
+    expect(filter.toOffset).toBe(200);
   });
 });
