@@ -33,7 +33,7 @@ export interface DataTabProps {
 }
 
 /**
- * Play pulls a bounded snapshot of message metadata applying the filters
+ * Fetch pulls a bounded snapshot of message metadata applying the filters
  * below (an all-blank filter pulls everything). Stop doesn't cancel the
  * in-flight backend fetch (no cancellation plumbing there) — it just
  * discards the result when it eventually arrives, so the grid never
@@ -134,8 +134,8 @@ export function DataTab({ connectionId, topicName }: DataTabProps) {
       </div>
 
       <div className="data-tab-controls">
-        <button type="button" aria-label="Play" onClick={handlePlay} disabled={isPlaying}>
-          ▶ Play
+        <button type="button" aria-label="Fetch" onClick={handlePlay} disabled={isPlaying}>
+          ▶ Fetch
         </button>
         <button type="button" aria-label="Stop" onClick={handleStop} disabled={!isPlaying}>
           ■ Stop

@@ -222,7 +222,7 @@ pub async fn connection_count_topic_messages(
     Ok(state.kafka.count_topic_messages(&connection, &topic, None).await?)
 }
 
-/// Backs the topic Data tab's Play button.
+/// Backs the topic Data tab's Fetch button.
 #[tauri::command]
 pub async fn connection_fetch_messages(
     state: State<'_, AppState>,

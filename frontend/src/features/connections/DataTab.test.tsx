@@ -48,10 +48,10 @@ beforeEach(() => {
 });
 
 describe("DataTab", () => {
-  it("renders Play and Stop controls, and all six filter inputs", () => {
+  it("renders Fetch and Stop controls, and all six filter inputs", () => {
     renderWithClient(<DataTab connectionId="1" topicName="orders" />);
 
-    expect(screen.getByRole("button", { name: "Play" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Fetch" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Stop" })).toBeInTheDocument();
     expect(screen.getByLabelText("Max messages per partition")).toBeInTheDocument();
     expect(screen.getByLabelText("Total max messages")).toBeInTheDocument();
@@ -66,18 +66,18 @@ describe("DataTab", () => {
     expect(screen.getByRole("button", { name: "Stop" })).toBeDisabled();
   });
 
-  it("shows a 'Load message payload' checkbox below Play/Stop, unchecked by default", () => {
+  it("shows a 'Load message payload' checkbox below Fetch/Stop, unchecked by default", () => {
     renderWithClient(<DataTab connectionId="1" topicName="orders" />);
     expect(screen.getByLabelText("Load message payload")).not.toBeChecked();
   });
 
-  it("fetches messages with an all-null, no-payload filter when Play is clicked with no filters set", async () => {
+  it("fetches messages with an all-null, no-payload filter when Fetch is clicked with no filters set", async () => {
     const fetchMessages = vi.fn(() => []);
     setInvokeHandlers({ connection_fetch_messages: fetchMessages });
     const user = userEvent.setup();
     renderWithClient(<DataTab connectionId="1" topicName="orders" />);
 
-    await user.click(screen.getByRole("button", { name: "Play" }));
+    await user.click(screen.getByRole("button", { name: "Fetch" }));
 
     await waitFor(() =>
       expect(fetchMessages).toHaveBeenCalledWith({
@@ -96,14 +96,14 @@ describe("DataTab", () => {
     );
   });
 
-  it("sets includePayload true when the checkbox is checked before Play is clicked", async () => {
+  it("sets includePayload true when the checkbox is checked before Fetch is clicked", async () => {
     const fetchMessages = vi.fn(() => []);
     setInvokeHandlers({ connection_fetch_messages: fetchMessages });
     const user = userEvent.setup();
     renderWithClient(<DataTab connectionId="1" topicName="orders" />);
 
     await user.click(screen.getByLabelText("Load message payload"));
-    await user.click(screen.getByRole("button", { name: "Play" }));
+    await user.click(screen.getByRole("button", { name: "Fetch" }));
 
     await waitFor(() =>
       expect(fetchMessages).toHaveBeenCalledWith(
@@ -112,7 +112,7 @@ describe("DataTab", () => {
     );
   });
 
-  it("applies entered filters when Play is clicked", async () => {
+  it("applies entered filters when Fetch is clicked", async () => {
     const fetchMessages = vi.fn(() => []);
     setInvokeHandlers({ connection_fetch_messages: fetchMessages });
     const user = userEvent.setup();
@@ -120,7 +120,7 @@ describe("DataTab", () => {
 
     await user.type(screen.getByLabelText("Max messages per partition"), "10");
     await user.type(screen.getByLabelText("Partition filter"), "0,1");
-    await user.click(screen.getByRole("button", { name: "Play" }));
+    await user.click(screen.getByRole("button", { name: "Fetch" }));
 
     await waitFor(() =>
       expect(fetchMessages).toHaveBeenCalledWith(
@@ -131,14 +131,14 @@ describe("DataTab", () => {
     );
   });
 
-  it("applies the offset filter when Play is clicked", async () => {
+  it("applies the offset filter when Fetch is clicked", async () => {
     const fetchMessages = vi.fn(() => []);
     setInvokeHandlers({ connection_fetch_messages: fetchMessages });
     const user = userEvent.setup();
     renderWithClient(<DataTab connectionId="1" topicName="orders" />);
 
     await user.type(screen.getByLabelText("Offset"), "100");
-    await user.click(screen.getByRole("button", { name: "Play" }));
+    await user.click(screen.getByRole("button", { name: "Fetch" }));
 
     await waitFor(() =>
       expect(fetchMessages).toHaveBeenCalledWith(
@@ -155,7 +155,7 @@ describe("DataTab", () => {
     const user = userEvent.setup();
     renderWithClient(<DataTab connectionId="1" topicName="orders" />);
 
-    await user.click(screen.getByRole("button", { name: "Play" }));
+    await user.click(screen.getByRole("button", { name: "Fetch" }));
 
     await waitFor(() => expect(lastGridProps?.rowData).toEqual(messages));
   });
@@ -166,7 +166,7 @@ describe("DataTab", () => {
     const user = userEvent.setup();
     const { unmount } = renderWithClient(<DataTab connectionId="1" topicName="orders" />);
 
-    await user.click(screen.getByRole("button", { name: "Play" }));
+    await user.click(screen.getByRole("button", { name: "Fetch" }));
     await waitFor(() => expect(lastGridProps?.rowData).toEqual(messages));
 
     unmount();
@@ -185,7 +185,7 @@ describe("DataTab", () => {
     const user = userEvent.setup();
     renderWithClient(<DataTab connectionId="1" topicName="orders" />);
 
-    await user.click(screen.getByRole("button", { name: "Play" }));
+    await user.click(screen.getByRole("button", { name: "Fetch" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Failed to fetch messages");
   });

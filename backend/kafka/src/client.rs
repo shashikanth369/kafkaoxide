@@ -85,7 +85,7 @@ pub trait KafkaClient: Send + Sync {
         password: Option<&str>,
     ) -> Result<u64, AppError>;
 
-    /// Backs the topic Data tab's Play button. Pulls message metadata (plus
+    /// Backs the topic Data tab's Fetch button. Pulls message metadata (plus
     /// base64 payload — decoded/rendered client-side when a row is
     /// clicked) applying the given filters; an all-`None` filter pulls
     /// everything. Bounded/historical, not a live tail: partition
