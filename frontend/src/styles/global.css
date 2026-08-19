@@ -362,8 +362,9 @@ body {
 .connection-row {
   display: flex;
   align-items: center;
-  padding: 3px 6px;
-  border-radius: 4px;
+  padding: 6px 10px;
+  margin-bottom: 2px;
+  border-radius: 8px;
   cursor: pointer;
 }
 .connection-row:hover {
@@ -431,8 +432,9 @@ body {
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 3px 6px;
-  border-radius: 4px;
+  padding: 6px 10px;
+  margin-bottom: 2px;
+  border-radius: 8px;
   cursor: pointer;
   font-size: 12px;
   color: var(--color-fg-muted);
@@ -460,8 +462,9 @@ body {
   padding: 0;
 }
 .resource-item {
-  padding: 3px 6px;
-  border-radius: 4px;
+  padding: 5px 10px;
+  margin-bottom: 2px;
+  border-radius: 8px;
   cursor: pointer;
   font-size: 12px;
 }
@@ -481,7 +484,9 @@ body {
   padding: 0 0 0 24px;
 }
 .topic-partition-item {
-  padding: 2px 6px;
+  padding: 4px 10px;
+  margin-bottom: 2px;
+  border-radius: 8px;
   font-size: 12px;
   color: var(--color-fg-muted);
 }
