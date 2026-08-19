@@ -90,6 +90,13 @@ body {
 .resizable-divider:active {
   background: var(--color-accent);
 }
+.resizable-divider--persistent {
+  background: var(--color-border);
+}
+.resizable-divider--persistent:hover,
+.resizable-divider--persistent:active {
+  background: var(--color-accent);
+}
 
 @media (max-width: 900px) {
   .resizable-pane--right {

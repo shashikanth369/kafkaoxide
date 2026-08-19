@@ -18,7 +18,7 @@ export function ResizableShell({ left, middle, right, storageKey = "kafkaoxide.p
         {left}
       </div>
       <div
-        className="resizable-divider"
+        className="resizable-divider resizable-divider--persistent"
         role="separator"
         aria-orientation="vertical"
         aria-label="Resize left panel"
