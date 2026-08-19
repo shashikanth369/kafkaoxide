@@ -1,5 +1,6 @@
 import { AgGridReact } from "ag-grid-react";
-import { AllCommunityModule, ColDef, ModuleRegistry, themeQuartz } from "ag-grid-community";
+import { AllCommunityModule, ColDef, ModuleRegistry } from "ag-grid-community";
+import { APP_GRID_THEME } from "./agGridTheme";
 import { usePartitions } from "./useClusterResources";
 
 ModuleRegistry.registerModules([AllCommunityModule]);
@@ -44,7 +45,7 @@ export function PartitionReplicasTab({ connectionId, topicName, partitionId }: P
     <div role="tabpanel" aria-label="Replicas" className="connection-modal-tab-panel">
       <div className="data-tab-grid" data-testid="replicas-grid">
         <AgGridReact<ReplicaRow>
-          theme={themeQuartz}
+          theme={APP_GRID_THEME}
           rowData={rows}
           columnDefs={COLUMN_DEFS}
           defaultColDef={DEFAULT_COL_DEF}

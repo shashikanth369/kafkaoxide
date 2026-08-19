@@ -12,11 +12,18 @@ vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
 // Real AG Grid needs DOM measurement (ResizeObserver etc.) jsdom doesn't
 // fully provide; this test's job is to verify DataTab passes the right
 // rowData/onRowClicked, not to exercise AG Grid's own rendering.
+interface MockColDef {
+  headerName?: string;
+  field?: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  valueGetter?: (params: any) => string;
+}
 let lastGridProps: {
   rowData: unknown[];
   onRowClicked: (event: { data: unknown }) => void;
   quickFilterText?: string;
   overlayNoRowsTemplate?: string;
+  columnDefs: MockColDef[];
 } | null = null;
 vi.mock("ag-grid-react", () => ({
   AgGridReact: (props: {
@@ -24,6 +31,7 @@ vi.mock("ag-grid-react", () => ({
     onRowClicked: (event: { data: unknown }) => void;
     quickFilterText?: string;
     overlayNoRowsTemplate?: string;
+    columnDefs: MockColDef[];
   }) => {
     lastGridProps = props;
     return null;
@@ -233,6 +241,21 @@ describe("DataTab", () => {
     await user.click(screen.getByRole("button", { name: "Fetch" }));
 
     await waitFor(() => expect(lastGridProps?.rowData).toEqual(messages));
+  });
+
+  it("includes a Value column that decodes a row's base64 payload", async () => {
+    renderWithClient(<DataTab connectionId="1" topicName="orders" />);
+
+    const valueColumn = lastGridProps?.columnDefs.find((c) => c.headerName === "Value");
+    expect(valueColumn).toBeDefined();
+    expect(valueColumn?.valueGetter?.({ data: { payloadBase64: "eyJhIjoxfQ==" } })).toBe('{"a":1}');
+  });
+
+  it("shows a blank Value for rows with no payload loaded", async () => {
+    renderWithClient(<DataTab connectionId="1" topicName="orders" />);
+
+    const valueColumn = lastGridProps?.columnDefs.find((c) => c.headerName === "Value");
+    expect(valueColumn?.valueGetter?.({ data: { payloadBase64: null } })).toBe("");
   });
 
   it("keeps the fetched messages cached for the tab across an unmount/remount (switching tabs away and back)", async () => {

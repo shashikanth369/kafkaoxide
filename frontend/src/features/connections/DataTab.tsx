@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { AgGridReact } from "ag-grid-react";
-import { AllCommunityModule, ColDef, ModuleRegistry, themeQuartz, ValueFormatterParams } from "ag-grid-community";
+import { AllCommunityModule, ColDef, ModuleRegistry, ValueFormatterParams, ValueGetterParams } from "ag-grid-community";
 import { TopicMessage } from "../../lib/tauri";
 import { useTabsStore } from "../tabs/useTabsStore";
 import { useMessageViewerStore } from "../workspace/useMessageViewerStore";
 import { dataTabCacheKey, EMPTY_TAB_MESSAGES, useTabDataStore } from "../workspace/useTabDataStore";
+import { APP_GRID_THEME } from "./agGridTheme";
 import { emptyFilterForm, FilterFormState, toMessageFilter } from "./dataFilters";
+import { base64ToBytes, bytesToText, detectConfluentAvro } from "./payloadDecoding";
 import { useFetchMessages } from "./useClusterResources";
 
 ModuleRegistry.registerModules([AllCommunityModule]);
@@ -14,11 +16,22 @@ function formatTimestamp(params: ValueFormatterParams<TopicMessage, number | nul
   return params.value ? new Date(params.value).toISOString() : "";
 }
 
+/** Decodes the row's payload for the Value column — blank until "Load message payload" is checked and a fetch has run. */
+function formatValue(params: ValueGetterParams<TopicMessage>): string {
+  const payload = params.data?.payloadBase64;
+  if (!payload) return "";
+  const bytes = base64ToBytes(payload);
+  const avro = detectConfluentAvro(bytes);
+  if (avro) return `Avro (schema id: ${avro.schemaId})`;
+  return bytesToText(bytes);
+}
+
 const COLUMN_DEFS: ColDef<TopicMessage>[] = [
-  { field: "partition", headerName: "Partition" },
-  { field: "offset", headerName: "Offset" },
-  { field: "timestampMs", headerName: "Timestamp", valueFormatter: formatTimestamp },
-  { field: "key", headerName: "Key" },
+  { field: "partition", headerName: "Partition", width: 100 },
+  { field: "offset", headerName: "Offset", width: 100 },
+  { field: "timestampMs", headerName: "Timestamp", valueFormatter: formatTimestamp, width: 200 },
+  { field: "key", headerName: "Key", width: 150 },
+  { headerName: "Value", valueGetter: formatValue, flex: 1 },
 ];
 
 const DEFAULT_COL_DEF: ColDef<TopicMessage> = {
@@ -189,7 +202,7 @@ export function DataTab({ connectionId, topicName, partitionId }: DataTabProps) 
 
       <div className="data-tab-grid" data-testid="message-grid">
         <AgGridReact<TopicMessage>
-          theme={themeQuartz}
+          theme={APP_GRID_THEME}
           rowData={messages}
           columnDefs={COLUMN_DEFS}
           defaultColDef={DEFAULT_COL_DEF}
