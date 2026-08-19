@@ -27,14 +27,25 @@ function AppShell() {
   const [showModal, setShowModal] = useState(false);
   const createConnection = useCreateConnection();
   const loadTabs = useTabsStore((s) => s.loadTabs);
+  const activeTabId = useTabsStore((s) => s.activeTabId);
   const selection = useWorkspaceSelectionStore((s) => s.selection);
+  const setSelectionActiveTab = useWorkspaceSelectionStore((s) => s.setActiveTab);
   const settingsOpen = useSettingsPanelStore((s) => s.isOpen);
   const openSettings = useSettingsPanelStore((s) => s.open);
   const hasSelectedMessage = useMessageViewerStore((s) => s.message !== null);
+  const setMessageViewerActiveTab = useMessageViewerStore((s) => s.setActiveTab);
 
   useEffect(() => {
     loadTabs();
   }, [loadTabs]);
+
+  // Each tab keeps its own workspace selection/message-viewer state — the
+  // global connection list (which clusters exist/are connected) still comes
+  // straight from the backend and isn't tab-scoped.
+  useEffect(() => {
+    setSelectionActiveTab(activeTabId);
+    setMessageViewerActiveTab(activeTabId);
+  }, [activeTabId, setSelectionActiveTab, setMessageViewerActiveTab]);
 
   return (
     <div className="app-shell">
@@ -67,7 +78,7 @@ function AppShell() {
             settingsOpen ? (
               <SettingsPanel />
             ) : (
-              <main className="app-main">
+              <main className="app-main" key={activeTabId ?? "no-tab"}>
                 {selection?.type === "connection" && <ClusterDetailPanel connectionId={selection.id} />}
                 {selection?.type === "broker" && (
                   <BrokerDetailPanel connectionId={selection.connectionId} brokerId={selection.brokerId} />
@@ -82,7 +93,7 @@ function AppShell() {
               </main>
             )
           }
-          right={hasSelectedMessage ? <MessagePayloadViewer /> : undefined}
+          right={hasSelectedMessage ? <MessagePayloadViewer key={activeTabId ?? "no-tab"} /> : undefined}
         />
       </div>
       <BottomPanel />

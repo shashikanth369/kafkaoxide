@@ -13,22 +13,49 @@ export type WorkspaceSelection =
   | null;
 
 interface WorkspaceSelectionState {
+  /** The active tab's selection — kept in sync with `byTab[activeTabId]` by `setActiveTab`. */
   selection: WorkspaceSelection;
+  activeTabId: string | null;
+  /** Per-tab selection cache, so each tab keeps its own independent workspace state. */
+  byTab: Record<string, WorkspaceSelection>;
+  /** Called whenever the active tab changes, so writes below land in the right tab's slot. */
+  setActiveTab: (tabId: string | null) => void;
   selectConnection: (id: string) => void;
   selectBroker: (connectionId: string, brokerId: number) => void;
   selectTopic: (connectionId: string, topicName: string) => void;
   selectConsumerGroup: (connectionId: string, groupId: string) => void;
   clearSelection: () => void;
+  /** Resets a tab's cached selection back to blank — the Bottom panel's "Clear memory" button. Defaults to the active tab. */
+  clearTabMemory: (tabId?: string) => void;
 }
 
-export const useWorkspaceSelectionStore = create<WorkspaceSelectionState>((set) => ({
-  selection: null,
-  selectConnection: (id: string) => set({ selection: { type: "connection", id } }),
-  selectBroker: (connectionId: string, brokerId: number) =>
-    set({ selection: { type: "broker", connectionId, brokerId } }),
-  selectTopic: (connectionId: string, topicName: string) =>
-    set({ selection: { type: "topic", connectionId, topicName } }),
-  selectConsumerGroup: (connectionId: string, groupId: string) =>
-    set({ selection: { type: "consumerGroup", connectionId, groupId } }),
-  clearSelection: () => set({ selection: null }),
-}));
+export const useWorkspaceSelectionStore = create<WorkspaceSelectionState>((set, get) => {
+  function write(selection: WorkspaceSelection) {
+    const tabId = get().activeTabId;
+    set((state) => ({
+      selection,
+      byTab: tabId ? { ...state.byTab, [tabId]: selection } : state.byTab,
+    }));
+  }
+
+  return {
+    selection: null,
+    activeTabId: null,
+    byTab: {},
+    setActiveTab: (tabId) =>
+      set((state) => ({ activeTabId: tabId, selection: (tabId ? state.byTab[tabId] : null) ?? null })),
+    selectConnection: (id) => write({ type: "connection", id }),
+    selectBroker: (connectionId, brokerId) => write({ type: "broker", connectionId, brokerId }),
+    selectTopic: (connectionId, topicName) => write({ type: "topic", connectionId, topicName }),
+    selectConsumerGroup: (connectionId, groupId) => write({ type: "consumerGroup", connectionId, groupId }),
+    clearSelection: () => write(null),
+    clearTabMemory: (tabId) => {
+      const target = tabId ?? get().activeTabId;
+      if (!target) return;
+      set((state) => ({
+        byTab: { ...state.byTab, [target]: null },
+        selection: state.activeTabId === target ? null : state.selection,
+      }));
+    },
+  };
+});

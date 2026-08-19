@@ -2,7 +2,7 @@ import { describe, expect, it, beforeEach } from "vitest";
 import { useWorkspaceSelectionStore } from "./useWorkspaceSelectionStore";
 
 beforeEach(() => {
-  useWorkspaceSelectionStore.setState({ selection: null });
+  useWorkspaceSelectionStore.setState({ selection: null, activeTabId: null, byTab: {} });
 });
 
 describe("useWorkspaceSelectionStore", () => {
@@ -62,5 +62,60 @@ describe("useWorkspaceSelectionStore", () => {
       connectionId: "conn-1",
       topicName: "orders",
     });
+  });
+});
+
+describe("useWorkspaceSelectionStore per-tab isolation", () => {
+  it("keeps each tab's selection independent", () => {
+    const store = useWorkspaceSelectionStore.getState();
+    store.setActiveTab("tab-1");
+    store.selectTopic("conn-1", "orders");
+
+    store.setActiveTab("tab-2");
+    expect(useWorkspaceSelectionStore.getState().selection).toBeNull();
+    store.selectTopic("conn-1", "payments");
+
+    store.setActiveTab("tab-1");
+    expect(useWorkspaceSelectionStore.getState().selection).toEqual({
+      type: "topic",
+      connectionId: "conn-1",
+      topicName: "orders",
+    });
+
+    store.setActiveTab("tab-2");
+    expect(useWorkspaceSelectionStore.getState().selection).toEqual({
+      type: "topic",
+      connectionId: "conn-1",
+      topicName: "payments",
+    });
+  });
+
+  it("clearTabMemory resets the active tab's selection without touching other tabs", () => {
+    const store = useWorkspaceSelectionStore.getState();
+    store.setActiveTab("tab-1");
+    store.selectTopic("conn-1", "orders");
+    store.setActiveTab("tab-2");
+    store.selectTopic("conn-1", "payments");
+
+    store.clearTabMemory();
+    expect(useWorkspaceSelectionStore.getState().selection).toBeNull();
+
+    store.setActiveTab("tab-1");
+    expect(useWorkspaceSelectionStore.getState().selection).toEqual({
+      type: "topic",
+      connectionId: "conn-1",
+      topicName: "orders",
+    });
+  });
+
+  it("clearTabMemory can target a specific, non-active tab", () => {
+    const store = useWorkspaceSelectionStore.getState();
+    store.setActiveTab("tab-1");
+    store.selectTopic("conn-1", "orders");
+
+    store.clearTabMemory("tab-1");
+
+    store.setActiveTab("tab-1");
+    expect(useWorkspaceSelectionStore.getState().selection).toBeNull();
   });
 });
