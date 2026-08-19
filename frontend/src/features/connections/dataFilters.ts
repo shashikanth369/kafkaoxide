@@ -15,13 +15,30 @@ export interface FilterFormState {
   includePayload: boolean;
 }
 
-export function emptyFilterForm(): FilterFormState {
+function pad(n: number): string {
+  return String(n).padStart(2, "0");
+}
+
+/** Formats a Date as a local `<input type="datetime-local">` value (`YYYY-MM-DDTHH:mm`). */
+function toDatetimeLocal(date: Date): string {
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+/** Today at the given local hour, minutes/seconds zeroed. */
+function todayAt(hours: number): string {
+  const date = new Date();
+  date.setHours(hours, 0, 0, 0);
+  return toDatetimeLocal(date);
+}
+
+/** The Data tab's default filter form — used both on first mount and whenever the reused tab switches to a different topic/partition/connection. From/To default to today's 12 AM–12 PM so a fresh Fetch is scoped to "today" rather than the whole topic. */
+export function defaultFilterForm(): FilterFormState {
   return {
     maxMessagesPerPartition: "",
     maxTotalMessages: "",
     partitions: "",
-    fromDate: "",
-    toDate: "",
+    fromDate: todayAt(0),
+    toDate: todayAt(12),
     offset: "",
     includePayload: false,
   };

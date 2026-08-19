@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { dataTabCacheKey, tabDataKey, UNASSIGNED_TAB_KEY, useTabDataStore } from "./useTabDataStore";
 
-const sample = [{ partition: 0, offset: 1, timestampMs: null, key: null, payloadBase64: null }];
+const sample = [{ partition: 0, offset: 1, timestampMs: null, key: null, payloadBase64: null, headers: [] }];
 
 beforeEach(() => {
   useTabDataStore.setState({ messagesByTab: {} });
@@ -46,7 +46,7 @@ describe("useTabDataStore", () => {
   });
 
   it("keeps each tab's cached messages independent", () => {
-    const other = [{ partition: 1, offset: 9, timestampMs: null, key: null, payloadBase64: null }];
+    const other = [{ partition: 1, offset: 9, timestampMs: null, key: null, payloadBase64: null, headers: [] }];
     useTabDataStore.getState().setTabMessages("tab-1", sample);
     useTabDataStore.getState().setTabMessages("tab-2", other);
 

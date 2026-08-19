@@ -6,7 +6,7 @@ import { useTabsStore } from "../tabs/useTabsStore";
 import { useMessageViewerStore } from "../workspace/useMessageViewerStore";
 import { dataTabCacheKey, EMPTY_TAB_MESSAGES, useTabDataStore } from "../workspace/useTabDataStore";
 import { APP_GRID_THEME } from "./agGridTheme";
-import { emptyFilterForm, FilterFormState, toMessageFilter } from "./dataFilters";
+import { defaultFilterForm, FilterFormState, toMessageFilter } from "./dataFilters";
 import { base64ToBytes, bytesToText, detectConfluentAvro } from "./payloadDecoding";
 import { useFetchMessages } from "./useClusterResources";
 import { ValueCell, ValueCellContext } from "./ValueCell";
@@ -57,7 +57,7 @@ export interface DataTabProps {
  */
 export function DataTab({ connectionId, topicName, partitionId }: DataTabProps) {
   const [form, setForm] = useState<FilterFormState>(() =>
-    partitionId === undefined ? emptyFilterForm() : { ...emptyFilterForm(), partitions: String(partitionId) },
+    partitionId === undefined ? defaultFilterForm() : { ...defaultFilterForm(), partitions: String(partitionId) },
   );
   const [isPlaying, setIsPlaying] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -81,7 +81,7 @@ export function DataTab({ connectionId, topicName, partitionId }: DataTabProps) 
   // successful Fetch look like it returned nothing.
   useEffect(() => {
     setForm(
-      partitionId === undefined ? emptyFilterForm() : { ...emptyFilterForm(), partitions: String(partitionId) },
+      partitionId === undefined ? defaultFilterForm() : { ...defaultFilterForm(), partitions: String(partitionId) },
     );
     setSearchText("");
     setError(null);

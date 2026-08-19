@@ -4,12 +4,13 @@ use base64::Engine;
 use error_stack::{Result, ResultExt};
 use kafkaoxide_core::{
     AppError, BrokerSummary, ConfigEntry, Connection, ConnectionStatus, ConsumerGroupLag,
-    ConsumerGroupSummary, MessageFilter, PartitionLag, PartitionSummary, SaslMechanism,
-    SecurityProtocol, TopicMessage, TopicSummary,
+    ConsumerGroupSummary, MessageFilter, MessageHeader, PartitionLag, PartitionSummary,
+    SaslMechanism, SecurityProtocol, TopicMessage, TopicSummary,
 };
 use rdkafka::admin::{AdminClient, AdminOptions, ResourceSpecifier};
 use rdkafka::client::DefaultClientContext;
 use rdkafka::consumer::{BaseConsumer, Consumer};
+use rdkafka::message::{BorrowedMessage, Headers};
 use rdkafka::topic_partition_list::{Offset, TopicPartitionList};
 use rdkafka::{ClientConfig, Message};
 use std::collections::{BTreeMap, HashMap};
@@ -130,6 +131,22 @@ pub trait KafkaClient: Send + Sync {
         group_id: &str,
         password: Option<&str>,
     ) -> Result<ConsumerGroupLag, AppError>;
+}
+
+/// Collects a message's Kafka headers, lossy-UTF-8-decoding each value —
+/// same treatment as the message key, since headers are conventionally
+/// short text metadata rather than arbitrary binary data.
+fn extract_headers(message: &BorrowedMessage) -> Vec<MessageHeader> {
+    let Some(headers) = message.headers() else {
+        return Vec::new();
+    };
+    headers
+        .iter()
+        .map(|header| MessageHeader {
+            key: header.key.to_string(),
+            value: header.value.map(|v| String::from_utf8_lossy(v).into_owned()),
+        })
+        .collect()
 }
 
 async fn run_probe(config: ClientConfig) -> Result<ConnectionStatus, AppError> {
@@ -436,6 +453,7 @@ impl KafkaClient for RdKafkaClient {
                             payload_base64: filter
                                 .include_payload
                                 .then(|| BASE64.encode(borrowed.payload().unwrap_or(&[]))),
+                            headers: extract_headers(&borrowed),
                         });
                         remaining.insert(partition, budget - 1);
                     }

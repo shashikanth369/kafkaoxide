@@ -23,6 +23,20 @@ pub struct MessageFilter {
     pub include_payload: bool,
 }
 
+/// A single Kafka message header — arbitrary key/value metadata sent
+/// alongside a message, separate from its key and payload (e.g.
+/// content-type, correlation/trace ids). Unlike `payload_base64`, headers
+/// are cheap, typically-small text and are always populated regardless of
+/// the "Load message payload" checkbox.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct MessageHeader {
+    pub key: String,
+    /// Lossy UTF-8 decoded, same treatment as `TopicMessage::key` — header
+    /// values are conventionally short text, not arbitrary binary data.
+    pub value: Option<String>,
+}
+
 /// One row in the Data tab's AG Grid. `payload_base64` is `None` unless the
 /// "Load message payload" checkbox was checked for this fetch; when
 /// present, it's decoded/rendered client-side (text, JSON, or
@@ -37,6 +51,7 @@ pub struct TopicMessage {
     pub timestamp_ms: Option<i64>,
     pub key: Option<String>,
     pub payload_base64: Option<String>,
+    pub headers: Vec<MessageHeader>,
 }
 
 #[cfg(test)]
@@ -61,11 +76,12 @@ mod tests {
             timestamp_ms: Some(1_700_000_000_000),
             key: Some("order-1".into()),
             payload_base64: Some("eyJpZCI6MX0=".into()),
+            headers: vec![],
         };
         let json = serde_json::to_string(&message).unwrap();
         assert_eq!(
             json,
-            r#"{"partition":0,"offset":42,"timestampMs":1700000000000,"key":"order-1","payloadBase64":"eyJpZCI6MX0="}"#
+            r#"{"partition":0,"offset":42,"timestampMs":1700000000000,"key":"order-1","payloadBase64":"eyJpZCI6MX0=","headers":[]}"#
         );
     }
 
@@ -77,8 +93,39 @@ mod tests {
             timestamp_ms: None,
             key: None,
             payload_base64: None,
+            headers: vec![],
         };
         let json = serde_json::to_string(&message).unwrap();
         assert!(json.contains(r#""payloadBase64":null"#));
+    }
+
+    #[test]
+    fn message_header_serializes_fields_as_camel_case() {
+        let header = MessageHeader {
+            key: "content-type".into(),
+            value: Some("application/json".into()),
+        };
+        let json = serde_json::to_string(&header).unwrap();
+        assert_eq!(json, r#"{"key":"content-type","value":"application/json"}"#);
+    }
+
+    #[test]
+    fn topic_message_carries_headers() {
+        let message = TopicMessage {
+            partition: 0,
+            offset: 42,
+            timestamp_ms: None,
+            key: None,
+            payload_base64: None,
+            headers: vec![
+                MessageHeader {
+                    key: "trace-id".into(),
+                    value: Some("abc123".into()),
+                },
+                MessageHeader { key: "empty".into(), value: None },
+            ],
+        };
+        let json = serde_json::to_string(&message).unwrap();
+        assert!(json.contains(r#""headers":[{"key":"trace-id","value":"abc123"},{"key":"empty","value":null}]"#));
     }
 }

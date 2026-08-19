@@ -85,7 +85,7 @@ describe("BottomPanel tab memory", () => {
   });
 
   it("reflects the active tab's cached Data tab rows as a byte-size estimate", () => {
-    const cached = [{ partition: 0, offset: 1, timestampMs: null, key: null, payloadBase64: null }];
+    const cached = [{ partition: 0, offset: 1, timestampMs: null, key: null, payloadBase64: null, headers: [] }];
     useTabsStore.setState({ activeTabId: "tab-1" });
     useTabDataStore.setState({ messagesByTab: { "tab-1": cached } });
 
@@ -99,7 +99,7 @@ describe("BottomPanel tab memory", () => {
     useTabsStore.setState({ activeTabId: "tab-1" });
     useTabDataStore.setState({
       messagesByTab: {
-        "tab-2": [{ partition: 0, offset: 1, timestampMs: null, key: null, payloadBase64: null }],
+        "tab-2": [{ partition: 0, offset: 1, timestampMs: null, key: null, payloadBase64: null, headers: [] }],
       },
     });
 
@@ -117,12 +117,12 @@ describe("BottomPanel tab memory", () => {
     });
     useMessageViewerStore.setState({
       activeTabId: "tab-1",
-      message: { partition: 0, offset: 1, timestampMs: null, key: null, payloadBase64: null },
-      byTab: { "tab-1": { partition: 0, offset: 1, timestampMs: null, key: null, payloadBase64: null } },
+      message: { partition: 0, offset: 1, timestampMs: null, key: null, payloadBase64: null, headers: [] },
+      byTab: { "tab-1": { partition: 0, offset: 1, timestampMs: null, key: null, payloadBase64: null, headers: [] } },
     });
     const dataKey = dataTabCacheKey("tab-1", "1", "orders");
     useTabDataStore.setState({
-      messagesByTab: { [dataKey]: [{ partition: 0, offset: 1, timestampMs: null, key: null, payloadBase64: null }] },
+      messagesByTab: { [dataKey]: [{ partition: 0, offset: 1, timestampMs: null, key: null, payloadBase64: null, headers: [] }] },
     });
     const user = userEvent.setup();
     render(<BottomPanel />);
@@ -139,7 +139,7 @@ describe("BottomPanel tab memory", () => {
     useWorkspaceSelectionStore.setState({
       selection: { type: "topic", connectionId: "1", topicName: "orders" },
     });
-    const cached = [{ partition: 0, offset: 1, timestampMs: null, key: null, payloadBase64: null }];
+    const cached = [{ partition: 0, offset: 1, timestampMs: null, key: null, payloadBase64: null, headers: [] }];
     useTabDataStore.setState({ messagesByTab: { [dataTabCacheKey("tab-1", "1", "orders")]: cached } });
 
     render(<BottomPanel />);
@@ -153,10 +153,10 @@ describe("BottomPanel tab memory", () => {
     useWorkspaceSelectionStore.setState({
       selection: { type: "partition", connectionId: "1", topicName: "orders", partitionId: 0 },
     });
-    const topicCached = [{ partition: 0, offset: 1, timestampMs: null, key: null, payloadBase64: null }];
+    const topicCached = [{ partition: 0, offset: 1, timestampMs: null, key: null, payloadBase64: null, headers: [] }];
     const partitionCached = [
-      { partition: 0, offset: 1, timestampMs: null, key: null, payloadBase64: null },
-      { partition: 0, offset: 2, timestampMs: null, key: null, payloadBase64: null },
+      { partition: 0, offset: 1, timestampMs: null, key: null, payloadBase64: null, headers: [] },
+      { partition: 0, offset: 2, timestampMs: null, key: null, payloadBase64: null, headers: [] },
     ];
     useTabDataStore.setState({
       messagesByTab: {

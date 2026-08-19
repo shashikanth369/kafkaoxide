@@ -155,12 +155,38 @@ describe("DataTab", () => {
     expect(screen.getByLabelText("Load message payload")).not.toBeChecked();
   });
 
-  it("fetches messages with an all-null, no-payload filter when Fetch is clicked with no filters set", async () => {
+  it("fetches with today's default 12 AM–12 PM range and no other filters when Fetch is clicked without changing anything", async () => {
+    const fetchMessages = vi.fn(
+      (_args: { filter: { fromTimestampMs: number | null; toTimestampMs: number | null } }) => [],
+    );
+    setInvokeHandlers({ connection_fetch_messages: fetchMessages });
+    const user = userEvent.setup();
+    renderWithClient(<DataTab connectionId="1" topicName="orders" />);
+
+    await user.click(screen.getByRole("button", { name: "Fetch" }));
+
+    await waitFor(() => expect(fetchMessages).toHaveBeenCalled());
+    const [{ filter }] = fetchMessages.mock.calls[0];
+    expect(filter).toMatchObject({
+      partitions: null,
+      maxMessagesPerPartition: null,
+      maxTotalMessages: null,
+      offset: null,
+      includePayload: false,
+    });
+    expect(filter.fromTimestampMs).not.toBeNull();
+    expect(filter.toTimestampMs).not.toBeNull();
+    expect(filter.toTimestampMs).toBeGreaterThan(filter.fromTimestampMs!);
+  });
+
+  it("fetches with an all-null filter when From and To are cleared", async () => {
     const fetchMessages = vi.fn(() => []);
     setInvokeHandlers({ connection_fetch_messages: fetchMessages });
     const user = userEvent.setup();
     renderWithClient(<DataTab connectionId="1" topicName="orders" />);
 
+    await user.clear(screen.getByLabelText("From"));
+    await user.clear(screen.getByLabelText("To"));
     await user.click(screen.getByRole("button", { name: "Fetch" }));
 
     await waitFor(() =>

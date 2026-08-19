@@ -140,6 +140,11 @@ export interface MessageFilter {
   includePayload: boolean;
 }
 
+export interface MessageHeader {
+  key: string;
+  value: string | null;
+}
+
 export interface TopicMessage {
   partition: number;
   offset: number;
@@ -147,6 +152,8 @@ export interface TopicMessage {
   key: string | null;
   /** null unless the fetch's `includePayload` filter was set. */
   payloadBase64: string | null;
+  /** Always populated regardless of `includePayload` — headers are cheap metadata, not the payload itself. */
+  headers: MessageHeader[];
 }
 
 export const api = {
