@@ -646,8 +646,25 @@ body {
   padding: 5px 8px;
 }
 .data-tab-grid {
+  /* AG Grid's own root div is styled inline `height: 100%`. Percentage
+     heights only resolve against a parent's `height` property specifically
+     — `min-height` doesn't count, even once it's clamped the parent's own
+     rendered size to a real, definite pixel value — so a flex-grown
+     container sized via `flex` + `min-height` alone leaves that `100%`
+     computing against nothing, and the grid's internal wrapper collapses
+     to ~0px (every row/header still renders in the DOM, just clipped to
+     invisible). Making this container `position: relative` and forcing
+     AG Grid's own wrapper to `position: absolute; inset: 0` sidesteps the
+     percentage-height rule entirely — an absolutely positioned box's
+     containing block is this element's *final, laid-out* padding box,
+     flex-grow size included, so it resolves correctly either way. */
+  position: relative;
   flex: 1;
   min-height: 320px;
+}
+.data-tab-grid > div {
+  position: absolute;
+  inset: 0;
 }
 .data-tab-no-rows {
   font-size: 13px;
