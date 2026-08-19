@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AgGridReact } from "ag-grid-react";
 import { AllCommunityModule, ColDef, ModuleRegistry, themeQuartz, ValueFormatterParams } from "ag-grid-community";
 import { TopicMessage } from "../../lib/tauri";
@@ -55,6 +55,18 @@ export function DataTab({ connectionId, topicName, partitionId }: DataTabProps) 
   const tabKey = dataTabCacheKey(activeTabId, connectionId, topicName, partitionId);
   const messages = useTabDataStore((s) => s.messagesByTab[tabKey] ?? EMPTY_TAB_MESSAGES);
   const setTabMessages = useTabDataStore((s) => s.setTabMessages);
+
+  // DataTab is reused (not remounted) when switching between partitions of
+  // the same topic within the same top-level tab — see PartitionDetailPanel,
+  // which doesn't key it by partitionId so the active tab (Properties/Data/
+  // Replicas) survives the switch. The initial useState above only runs
+  // once on mount, so without this the Partition filter would keep showing
+  // whichever partition was selected first.
+  useEffect(() => {
+    if (partitionId !== undefined) {
+      setForm((prev) => ({ ...prev, partitions: String(partitionId) }));
+    }
+  }, [partitionId]);
 
   function updateForm(patch: Partial<FilterFormState>) {
     setForm((prev) => ({ ...prev, ...patch }));

@@ -68,6 +68,24 @@ describe("DataTab", () => {
     expect(screen.getByLabelText("Partition filter")).toBeDisabled();
   });
 
+  it("updates the partition filter when partitionId changes without the component remounting", () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+    const { rerender } = render(
+      <QueryClientProvider client={client}>
+        <DataTab connectionId="1" topicName="orders" partitionId={0} />
+      </QueryClientProvider>,
+    );
+    expect(screen.getByLabelText("Partition filter")).toHaveValue("0");
+
+    rerender(
+      <QueryClientProvider client={client}>
+        <DataTab connectionId="1" topicName="orders" partitionId={1} />
+      </QueryClientProvider>,
+    );
+
+    expect(screen.getByLabelText("Partition filter")).toHaveValue("1");
+  });
+
   it("leaves the partition filter blank and editable when partitionId is not given", () => {
     renderWithClient(<DataTab connectionId="1" topicName="orders" />);
 

@@ -48,6 +48,28 @@ describe("PartitionDetailPanel", () => {
     expect(screen.getByLabelText("Partition filter")).toBeDisabled();
   });
 
+  it("updates the Data tab's partition filter when switching to a different partition while already on Data", async () => {
+    setInvokeHandlers({ connection_list_partitions: () => [] });
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+    const user = userEvent.setup();
+    const { rerender } = render(
+      <QueryClientProvider client={client}>
+        <PartitionDetailPanel connectionId="1" topicName="orders" partitionId={0} />
+      </QueryClientProvider>,
+    );
+    await user.click(screen.getByRole("tab", { name: "Data" }));
+    expect(screen.getByLabelText("Partition filter")).toHaveValue("0");
+
+    rerender(
+      <QueryClientProvider client={client}>
+        <PartitionDetailPanel connectionId="1" topicName="orders" partitionId={1} />
+      </QueryClientProvider>,
+    );
+
+    expect(screen.getByRole("tab", { name: "Data" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByLabelText("Partition filter")).toHaveValue("1");
+  });
+
   it("switches to the Replicas tab when clicked", async () => {
     setInvokeHandlers({
       connection_list_partitions: () => [{ id: 0, leader: 1, replicas: [1], isr: [1], lowOffset: 0, highOffset: 0 }],
