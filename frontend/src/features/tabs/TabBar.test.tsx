@@ -190,4 +190,30 @@ describe("TabBar", () => {
     render(<TabBar />);
     expect(screen.queryByRole("tab", { name: "Settings" })).not.toBeInTheDocument();
   });
+
+  it("does not mark a regular tab as selected while Settings is open, even if it is the active tab", () => {
+    useTabsStore.setState({
+      tabs: [{ id: "1", name: "Alpha", position: 0 }],
+      activeTabId: "1",
+    });
+    useSettingsPanelStore.setState({ isOpen: true });
+    render(<TabBar />);
+
+    expect(screen.getByRole("tab", { name: "Alpha" })).toHaveAttribute("aria-selected", "false");
+    expect(screen.getByRole("tab", { name: "Settings" })).toHaveAttribute("aria-selected", "true");
+  });
+
+  it("closes Settings when a regular tab is clicked while Settings is open", async () => {
+    useTabsStore.setState({
+      tabs: [{ id: "1", name: "Alpha", position: 0 }],
+      activeTabId: "1",
+    });
+    useSettingsPanelStore.setState({ isOpen: true });
+    const user = userEvent.setup();
+    render(<TabBar />);
+
+    await user.click(screen.getByText("Alpha"));
+
+    expect(useSettingsPanelStore.getState().isOpen).toBe(false);
+  });
 });

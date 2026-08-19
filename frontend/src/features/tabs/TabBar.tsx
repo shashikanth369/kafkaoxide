@@ -34,6 +34,7 @@ export function TabBar() {
     if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
       selectTab(id);
+      closeSettings();
     }
   }
 
@@ -45,10 +46,13 @@ export function TabBar() {
             key={tab.id}
             role="tab"
             aria-label={tab.name}
-            aria-selected={tab.id === activeTabId}
+            aria-selected={tab.id === activeTabId && !settingsOpen}
             tabIndex={0}
             className="tab"
-            onClick={() => selectTab(tab.id)}
+            onClick={() => {
+              selectTab(tab.id);
+              closeSettings();
+            }}
             onDoubleClick={() => startEditing(tab.id, tab.name)}
             onKeyDown={(e) => handleTabKeyDown(e, tab.id)}
           >

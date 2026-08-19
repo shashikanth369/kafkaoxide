@@ -68,4 +68,38 @@ describe("SettingsPanel", () => {
 
     expect(usePreferencesStore.getState().fontSizePx).toBe(DEFAULT_FONT_SIZE_PX + 1);
   });
+
+  it("closes the font menu when clicking outside of it", async () => {
+    const user = userEvent.setup();
+    render(<SettingsPanel />);
+
+    await user.click(screen.getByRole("button", { name: /System UI/ }));
+    expect(screen.getByRole("listbox")).toBeInTheDocument();
+
+    await user.click(screen.getByText("Settings"));
+
+    expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+  });
+
+  it("closes the font menu on Escape", async () => {
+    const user = userEvent.setup();
+    render(<SettingsPanel />);
+
+    await user.click(screen.getByRole("button", { name: /System UI/ }));
+    expect(screen.getByRole("listbox")).toBeInTheDocument();
+
+    await user.keyboard("{Escape}");
+
+    expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+  });
+
+  it("selects a font family via keyboard navigation (ArrowDown + Enter)", async () => {
+    const user = userEvent.setup();
+    render(<SettingsPanel />);
+
+    await user.click(screen.getByRole("button", { name: /System UI/ }));
+    await user.keyboard("{ArrowDown}{Enter}");
+
+    expect(usePreferencesStore.getState().appliedFontFamilyId).toBe("inter");
+  });
 });
