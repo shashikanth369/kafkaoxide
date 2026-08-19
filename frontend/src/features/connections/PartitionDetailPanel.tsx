@@ -18,7 +18,7 @@ const PARTITION_TABS: { id: PartitionTabId; label: string }[] = [
 ];
 
 export function PartitionDetailPanel({ connectionId, topicName, partitionId }: PartitionDetailPanelProps) {
-  const [activeTab, setActiveTab] = useState<PartitionTabId>("properties");
+  const [activeTab, setActiveTab] = useState<PartitionTabId>("data");
 
   return (
     <div className="cluster-detail-panel">

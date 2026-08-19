@@ -12,11 +12,11 @@ function renderWithClient(ui: React.ReactElement) {
 }
 
 describe("TopicDetailPanel", () => {
-  it("opens on the Properties tab by default, showing the topic name", () => {
+  it("opens on the Data tab by default", () => {
     renderWithClient(<TopicDetailPanel connectionId="1" topicName="orders" />);
 
-    expect(screen.getByRole("tab", { name: "Properties" })).toHaveAttribute("aria-selected", "true");
-    expect(screen.getByLabelText("Topic name")).toHaveValue("orders");
+    expect(screen.getByRole("tab", { name: "Data" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.queryByLabelText("Topic name")).not.toBeInTheDocument();
   });
 
   it("renders Properties, Data, Partitions, and Config tabs", () => {
@@ -28,13 +28,13 @@ describe("TopicDetailPanel", () => {
     expect(screen.getByRole("tab", { name: "Config" })).toBeInTheDocument();
   });
 
-  it("switches to the Data tab when clicked", async () => {
+  it("switches to the Properties tab when clicked, showing the topic name", async () => {
     const user = userEvent.setup();
     renderWithClient(<TopicDetailPanel connectionId="1" topicName="orders" />);
 
-    await user.click(screen.getByRole("tab", { name: "Data" }));
+    await user.click(screen.getByRole("tab", { name: "Properties" }));
 
-    expect(screen.getByRole("tab", { name: "Data" })).toHaveAttribute("aria-selected", "true");
-    expect(screen.queryByLabelText("Topic name")).not.toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Properties" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByLabelText("Topic name")).toHaveValue("orders");
   });
 });

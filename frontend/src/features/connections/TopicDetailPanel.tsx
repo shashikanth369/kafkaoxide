@@ -19,7 +19,7 @@ const TOPIC_TABS: { id: TopicTabId; label: string }[] = [
 ];
 
 export function TopicDetailPanel({ connectionId, topicName }: TopicDetailPanelProps) {
-  const [activeTab, setActiveTab] = useState<TopicTabId>("properties");
+  const [activeTab, setActiveTab] = useState<TopicTabId>("data");
 
   return (
     <div className="cluster-detail-panel">
