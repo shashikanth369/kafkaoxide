@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
@@ -7,6 +7,13 @@ import { setInvokeHandlers } from "../../../lib/testInvoke";
 import { ConnectionModal } from "./ConnectionModal";
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
+
+function pointerEventAt(type: string, clientX: number, clientY: number): Event {
+  const event = new Event(type, { bubbles: true });
+  Object.defineProperty(event, "clientX", { value: clientX });
+  Object.defineProperty(event, "clientY", { value: clientY });
+  return event;
+}
 
 function renderWithClient(ui: ReactNode) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
@@ -123,5 +130,34 @@ describe("ConnectionModal", () => {
     await user.click(screen.getByRole("button", { name: "Test" }));
 
     expect(screen.getByRole("alert")).toHaveTextContent("Cluster name is required");
+  });
+
+  it("moves with the pointer when dragged by its header", () => {
+    renderWithClient(<ConnectionModal onAdd={vi.fn()} onCancel={vi.fn()} />);
+    const dialog = screen.getByRole("dialog", { name: "New Connection" });
+    const header = screen.getByText("New Connection").closest("header") as HTMLElement;
+
+    act(() => {
+      header.dispatchEvent(pointerEventAt("pointerdown", 100, 100));
+    });
+    act(() => {
+      window.dispatchEvent(pointerEventAt("pointermove", 140, 115));
+    });
+
+    expect(dialog).toHaveStyle({ transform: "translate(40px, 15px)" });
+  });
+
+  it("does not move when clicking inside the body, only from the header", () => {
+    renderWithClient(<ConnectionModal onAdd={vi.fn()} onCancel={vi.fn()} />);
+    const dialog = screen.getByRole("dialog", { name: "New Connection" });
+
+    act(() => {
+      screen.getByLabelText("Cluster name").dispatchEvent(pointerEventAt("pointerdown", 100, 100));
+    });
+    act(() => {
+      window.dispatchEvent(pointerEventAt("pointermove", 140, 115));
+    });
+
+    expect(dialog).toHaveStyle({ transform: "translate(0px, 0px)" });
   });
 });

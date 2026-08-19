@@ -4,6 +4,7 @@ import { useTestConnection } from "../useConnections";
 import { ConnectionTabId, ConnectionTabsView } from "./ConnectionTabsView";
 import { ConnectionDraft, emptyDraft, toNewConnection, validateDraft } from "./draft";
 import { PingResult } from "./PingResult";
+import { useDraggableModal } from "./useDraggableModal";
 
 export interface ConnectionModalProps {
   onAdd: (connection: NewConnection) => void | Promise<void>;
@@ -16,6 +17,7 @@ export function ConnectionModal({ onAdd, onCancel }: ConnectionModalProps) {
   const [validationError, setValidationError] = useState<string | null>(null);
   const [isAdding, setIsAdding] = useState(false);
   const testConnection = useTestConnection();
+  const { offset, startDragging } = useDraggableModal();
 
   function updateDraft(patch: Partial<ConnectionDraft>) {
     setDraft((prev) => ({ ...prev, ...patch }));
@@ -51,9 +53,10 @@ export function ConnectionModal({ onAdd, onCancel }: ConnectionModalProps) {
         role="dialog"
         aria-modal="true"
         aria-label="New Connection"
+        style={{ transform: `translate(${offset.x}px, ${offset.y}px)` }}
         onClick={(e) => e.stopPropagation()}
       >
-        <header className="connection-modal-header">
+        <header className="connection-modal-header" onPointerDown={startDragging}>
           <h2>New Connection</h2>
         </header>
 
