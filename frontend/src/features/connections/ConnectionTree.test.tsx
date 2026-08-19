@@ -1,9 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { setInvokeHandlers } from "../../lib/testInvoke";
 import { ConnectionTree } from "./ConnectionTree";
+import { connectMutationKey } from "./useConnections";
 import { useWorkspaceSelectionStore } from "../workspace/useWorkspaceSelectionStore";
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
@@ -105,7 +106,11 @@ describe("ConnectionTree", () => {
 
     await user.click(screen.getByTestId("connection-row-1"));
 
-    expect(useWorkspaceSelectionStore.getState().selection).toEqual({ type: "connection", id: "1" });
+    expect(useWorkspaceSelectionStore.getState().selection).toEqual({
+      type: "connection",
+      id: "1",
+      name: "Local Kafka",
+    });
   });
 
   it("marks the selected connection row visually", async () => {
@@ -206,5 +211,41 @@ describe("ConnectionTree", () => {
     await user.click(await screen.findByRole("button", { name: "Expand Local Kafka" }));
 
     expect(useWorkspaceSelectionStore.getState().selection).toBeNull();
+  });
+
+  it("shows a connecting spinner next to the cluster name while a connect mutation for it is in flight", async () => {
+    setInvokeHandlers({
+      connection_list: () => [sampleConnection()],
+      connection_check_status: () => "UNKNOWN",
+      connection_is_connected: () => false,
+    });
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <ConnectionTree />
+      </QueryClientProvider>,
+    );
+    await screen.findByText("Local Kafka");
+    expect(screen.queryByRole("status", { name: "Connecting" })).not.toBeInTheDocument();
+
+    let resolveConnect: () => void = () => {};
+    const pending = new Promise<void>((resolve) => {
+      resolveConnect = resolve;
+    });
+    act(() => {
+      client
+        .getMutationCache()
+        .build(client, { mutationKey: connectMutationKey("1"), mutationFn: () => pending })
+        .execute(undefined);
+    });
+
+    expect(await screen.findByRole("status", { name: "Connecting" })).toBeInTheDocument();
+
+    await act(async () => {
+      resolveConnect();
+      await pending;
+    });
+
+    await waitFor(() => expect(screen.queryByRole("status", { name: "Connecting" })).not.toBeInTheDocument());
   });
 });

@@ -69,12 +69,23 @@ export function useConnectionConnected(id: string) {
   });
 }
 
-/** Backs the cluster detail panel's "Reconnect" button. */
-export function useConnect() {
+/**
+ * Backs the cluster detail panel's "Reconnect" button. Takes `id` as a hook
+ * argument (rather than at `.mutate()` time) so the mutation key is scoped
+ * to this connection — `useIsMutating({ mutationKey: connectMutationKey(id) })`
+ * elsewhere (the connection tree's spinner) can then observe it in flight
+ * without needing its own reference to this mutation instance.
+ */
+export function connectMutationKey(id: string) {
+  return ["connect", id];
+}
+
+export function useConnect(id: string) {
   const queryClient = useQueryClient();
-  return useMutation<ConnectionStatus, Error, string>({
-    mutationFn: (id: string) => api.connectConnection(id),
-    onSuccess: (_status, id) => {
+  return useMutation<ConnectionStatus, Error, void>({
+    mutationKey: connectMutationKey(id),
+    mutationFn: () => api.connectConnection(id),
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["connection-connected", id] });
       queryClient.invalidateQueries({ queryKey: ["connection-status", id] });
     },

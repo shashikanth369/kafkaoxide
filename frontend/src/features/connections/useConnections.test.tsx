@@ -57,8 +57,8 @@ describe("useConnect", () => {
     const connectionConnect = vi.fn(() => "REACHABLE");
     setInvokeHandlers({ connection_connect: connectionConnect });
 
-    const { result } = renderHook(() => useConnect(), { wrapper: createWrapper() });
-    result.current.mutate("1");
+    const { result } = renderHook(() => useConnect("1"), { wrapper: createWrapper() });
+    result.current.mutate();
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(connectionConnect).toHaveBeenCalledWith({ id: "1" });

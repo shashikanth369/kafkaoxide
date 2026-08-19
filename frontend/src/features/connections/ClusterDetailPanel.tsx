@@ -25,7 +25,7 @@ export function ClusterDetailPanel({ connectionId }: ClusterDetailPanelProps) {
   const [error, setError] = useState<string | null>(null);
   const initializedForRef = useRef<string | null>(null);
 
-  const connect = useConnect();
+  const connect = useConnect(connectionId);
   const disconnect = useDisconnect();
   const updateConnection = useUpdateConnection();
 
@@ -49,7 +49,7 @@ export function ClusterDetailPanel({ connectionId }: ClusterDetailPanelProps) {
   async function handleReconnect() {
     setError(null);
     try {
-      await connect.mutateAsync(connectionId);
+      await connect.mutateAsync();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to reconnect");
     }

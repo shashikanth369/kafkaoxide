@@ -1,6 +1,7 @@
 import { useState } from "react";
+import { useIsMutating } from "@tanstack/react-query";
 import { ConnectionStatus } from "../../lib/tauri";
-import { useConnectionConnected, useConnectionsQuery, useConnectionStatus } from "./useConnections";
+import { connectMutationKey, useConnectionConnected, useConnectionsQuery, useConnectionStatus } from "./useConnections";
 import { useWorkspaceSelectionStore } from "../workspace/useWorkspaceSelectionStore";
 import { ClusterResourceTree } from "./ClusterResourceTree";
 
@@ -25,13 +26,14 @@ function ConnectionRow({ id, name }: { id: string; name: string }) {
   const isSelected = selection?.type === "connection" && selection.id === id;
   const [expanded, setExpanded] = useState(false);
   const connected = isConnected ?? false;
+  const isConnecting = useIsMutating({ mutationKey: connectMutationKey(id) }) > 0;
 
   return (
     <>
       <li
         className={`connection-row${isSelected ? " connection-row--selected" : ""}`}
         data-testid={`connection-row-${id}`}
-        onClick={() => selectConnection(id)}
+        onClick={() => selectConnection(id, name)}
       >
         {connected && (
           <button
@@ -48,6 +50,7 @@ function ConnectionRow({ id, name }: { id: string; name: string }) {
         )}
         <span className={statusClass(status ?? "UNKNOWN", connected)} data-testid={`status-${id}`} />
         <span>{name}</span>
+        {isConnecting && <span className="spinner" role="status" aria-label="Connecting" />}
       </li>
       {connected && (
         <li className="connection-row-children" style={expanded ? undefined : { display: "none" }}>
