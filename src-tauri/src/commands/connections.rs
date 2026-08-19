@@ -1,7 +1,5 @@
 use crate::state::AppState;
 use kafkaoxide_core::{Connection, ConnectionStatus, NewConnection};
-use kafkaoxide_kafka::{KafkaClient, ZookeeperClient};
-use kafkaoxide_secrets::SecretStore;
 use tauri::{AppHandle, State};
 
 #[derive(serde::Serialize)]
