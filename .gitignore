@@ -27,3 +27,6 @@ target
 # Node
 node_modules
 dist
+
+# Tauri-generated schemas/capabilities (regenerated on build)
+/src-tauri/gen
