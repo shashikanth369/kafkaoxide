@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { ThemeProvider } from "./features/theme/ThemeProvider";
-import { ThemeSwitcher } from "./features/theme/ThemeSwitcher";
+import { ThemeDropdown } from "./features/theme/ThemeDropdown";
 import { TabBar } from "./features/tabs/TabBar";
 import { useTabsStore } from "./features/tabs/useTabsStore";
 import { ConnectionTree } from "./features/connections/ConnectionTree";
@@ -34,7 +34,7 @@ function AppShell() {
     <div className="app-shell">
       <header className="app-header">
         <TabBar />
-        <ThemeSwitcher />
+        <ThemeDropdown />
       </header>
       <div className="app-body">
         <ResizableShell
