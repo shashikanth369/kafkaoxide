@@ -5,6 +5,8 @@ import { TabBar } from "./features/tabs/TabBar";
 import { useTabsStore } from "./features/tabs/useTabsStore";
 import { ConnectionTree } from "./features/connections/ConnectionTree";
 import { ConnectionModal } from "./features/connections/modal/ConnectionModal";
+import { ConnectionDraft, connectionToDraft } from "./features/connections/modal/draft";
+import { Connection } from "./lib/tauri";
 import { ClusterDetailPanel } from "./features/connections/ClusterDetailPanel";
 import { BrokerDetailPanel } from "./features/connections/BrokerDetailPanel";
 import { TopicDetailPanel } from "./features/connections/TopicDetailPanel";
@@ -26,7 +28,18 @@ const queryClient = new QueryClient();
 
 function AppShell() {
   const [showModal, setShowModal] = useState(false);
+  const [cloneDraft, setCloneDraft] = useState<ConnectionDraft | null>(null);
   const createConnection = useCreateConnection();
+
+  function handleClone(connection: Connection) {
+    setCloneDraft({ ...connectionToDraft(connection), name: `${connection.name} (Copy)` });
+    setShowModal(true);
+  }
+
+  function closeModal() {
+    setShowModal(false);
+    setCloneDraft(null);
+  }
   const loadTabs = useTabsStore((s) => s.loadTabs);
   const activeTabId = useTabsStore((s) => s.activeTabId);
   const selection = useWorkspaceSelectionStore((s) => s.selection);
@@ -61,18 +74,19 @@ function AppShell() {
           left={
             <aside className="app-sidebar">
               <button type="button" onClick={() => setShowModal(true)}>
-                + New Connection
+                + Add Cluster
               </button>
               {showModal && (
                 <ConnectionModal
+                  initialDraft={cloneDraft ?? undefined}
                   onAdd={async (connection) => {
                     await createConnection.mutateAsync(connection);
-                    setShowModal(false);
+                    closeModal();
                   }}
-                  onCancel={() => setShowModal(false)}
+                  onCancel={closeModal}
                 />
               )}
-              <ConnectionTree />
+              <ConnectionTree onClone={handleClone} />
             </aside>
           }
           middle={

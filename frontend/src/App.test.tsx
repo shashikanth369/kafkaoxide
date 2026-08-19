@@ -36,7 +36,7 @@ describe("App", () => {
 
     expect(screen.queryByRole("dialog", { name: "New Connection" })).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "+ New Connection" }));
+    await user.click(screen.getByRole("button", { name: "+ Add Cluster" }));
 
     expect(screen.getByRole("dialog", { name: "New Connection" })).toBeInTheDocument();
   });

@@ -248,4 +248,120 @@ describe("ConnectionTree", () => {
 
     await waitFor(() => expect(screen.queryByRole("status", { name: "Connecting" })).not.toBeInTheDocument());
   });
+
+  describe("right-click context menu", () => {
+    beforeEach(() => {
+      setInvokeHandlers({
+        connection_list: () => [sampleConnection()],
+        connection_check_status: () => "UNKNOWN",
+        connection_is_connected: () => false,
+      });
+    });
+
+    async function openMenu() {
+      const user = userEvent.setup();
+      renderWithClient(<ConnectionTree />);
+      await screen.findByText("Local Kafka");
+      await user.pointer({ keys: "[MouseRight]", target: screen.getByTestId("connection-row-1") });
+      return user;
+    }
+
+    it("shows Reconnect, Disconnect, Clone Connection, and Delete Connection", async () => {
+      await openMenu();
+
+      expect(screen.getByRole("menuitem", { name: "Reconnect" })).toBeInTheDocument();
+      expect(screen.getByRole("menuitem", { name: "Disconnect" })).toBeInTheDocument();
+      expect(screen.getByRole("menuitem", { name: "Clone Connection" })).toBeInTheDocument();
+      expect(screen.getByRole("menuitem", { name: "Delete Connection" })).toBeInTheDocument();
+    });
+
+    it("does not change the workspace selection when right-clicked", async () => {
+      await openMenu();
+      expect(useWorkspaceSelectionStore.getState().selection).toBeNull();
+    });
+
+    it("calls connection_connect when Reconnect is clicked", async () => {
+      const connect = vi.fn(() => "REACHABLE");
+      setInvokeHandlers({
+        connection_list: () => [sampleConnection()],
+        connection_check_status: () => "UNKNOWN",
+        connection_is_connected: () => false,
+        connection_connect: connect,
+      });
+      const user = await openMenu();
+
+      await user.click(screen.getByRole("menuitem", { name: "Reconnect" }));
+
+      await waitFor(() => expect(connect).toHaveBeenCalledWith({ id: "1" }));
+    });
+
+    it("calls connection_disconnect when Disconnect is clicked", async () => {
+      const disconnect = vi.fn();
+      setInvokeHandlers({
+        connection_list: () => [sampleConnection()],
+        connection_check_status: () => "UNKNOWN",
+        connection_is_connected: () => false,
+        connection_disconnect: disconnect,
+      });
+      const user = await openMenu();
+
+      await user.click(screen.getByRole("menuitem", { name: "Disconnect" }));
+
+      await waitFor(() => expect(disconnect).toHaveBeenCalledWith({ id: "1" }));
+    });
+
+    it("calls onClone with the full connection when Clone Connection is clicked", async () => {
+      const onClone = vi.fn();
+      const user = userEvent.setup();
+      renderWithClient(<ConnectionTree onClone={onClone} />);
+      await screen.findByText("Local Kafka");
+      await user.pointer({ keys: "[MouseRight]", target: screen.getByTestId("connection-row-1") });
+
+      await user.click(screen.getByRole("menuitem", { name: "Clone Connection" }));
+
+      expect(onClone).toHaveBeenCalledWith(expect.objectContaining({ id: "1", name: "Local Kafka" }));
+    });
+
+    it("asks for confirmation and calls connection_delete when Delete Connection is confirmed", async () => {
+      const del = vi.fn();
+      setInvokeHandlers({
+        connection_list: () => [sampleConnection()],
+        connection_check_status: () => "UNKNOWN",
+        connection_is_connected: () => false,
+        connection_delete: del,
+      });
+      vi.spyOn(window, "confirm").mockReturnValue(true);
+      const user = await openMenu();
+
+      await user.click(screen.getByRole("menuitem", { name: "Delete Connection" }));
+
+      expect(window.confirm).toHaveBeenCalled();
+      await waitFor(() => expect(del).toHaveBeenCalledWith({ id: "1" }));
+    });
+
+    it("does not call connection_delete when the confirmation is dismissed", async () => {
+      const del = vi.fn();
+      setInvokeHandlers({
+        connection_list: () => [sampleConnection()],
+        connection_check_status: () => "UNKNOWN",
+        connection_is_connected: () => false,
+        connection_delete: del,
+      });
+      vi.spyOn(window, "confirm").mockReturnValue(false);
+      const user = await openMenu();
+
+      await user.click(screen.getByRole("menuitem", { name: "Delete Connection" }));
+
+      expect(del).not.toHaveBeenCalled();
+    });
+
+    it("closes the menu when Escape is pressed", async () => {
+      const user = await openMenu();
+      expect(screen.getByRole("menu")).toBeInTheDocument();
+
+      await user.keyboard("{Escape}");
+
+      expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+    });
+  });
 });

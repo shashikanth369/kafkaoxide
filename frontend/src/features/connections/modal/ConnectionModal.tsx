@@ -9,11 +9,13 @@ import { useDraggableModal } from "./useDraggableModal";
 export interface ConnectionModalProps {
   onAdd: (connection: NewConnection) => void | Promise<void>;
   onCancel: () => void;
+  /** Pre-fills the form — used to clone an existing connection's (non-secret) values into a new one. */
+  initialDraft?: ConnectionDraft;
 }
 
-export function ConnectionModal({ onAdd, onCancel }: ConnectionModalProps) {
+export function ConnectionModal({ onAdd, onCancel, initialDraft }: ConnectionModalProps) {
   const [activeTab, setActiveTab] = useState<ConnectionTabId>("properties");
-  const [draft, setDraft] = useState<ConnectionDraft>(emptyDraft);
+  const [draft, setDraft] = useState<ConnectionDraft>(() => initialDraft ?? emptyDraft());
   const [validationError, setValidationError] = useState<string | null>(null);
   const [isAdding, setIsAdding] = useState(false);
   const testConnection = useTestConnection();

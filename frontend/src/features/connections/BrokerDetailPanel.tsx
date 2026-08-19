@@ -20,20 +20,25 @@ export function BrokerDetailPanel({ connectionId, brokerId }: BrokerDetailPanelP
       <header className="cluster-detail-header">
         <h2>Broker {broker.id}</h2>
       </header>
-      <fieldset disabled={isConnected ?? false} className="connection-modal-fieldset">
-        <label>
-          Broker ID
-          <input value={String(broker.id)} readOnly />
-        </label>
-        <label>
-          Host
-          <input value={broker.host} readOnly />
-        </label>
-        <label>
-          Port
-          <input value={String(broker.port)} readOnly />
-        </label>
-      </fieldset>
+      <div role="tabpanel" aria-label="Properties" className="connection-modal-tab-panel">
+        <fieldset disabled={isConnected ?? false} className="connection-modal-fieldset">
+          <section className="connection-modal-section">
+            <h3>General</h3>
+            <label>
+              Broker ID
+              <input value={String(broker.id)} readOnly />
+            </label>
+            <label>
+              Host
+              <input value={broker.host} readOnly />
+            </label>
+            <label>
+              Port
+              <input value={String(broker.port)} readOnly />
+            </label>
+          </section>
+        </fieldset>
+      </div>
     </div>
   );
 }
