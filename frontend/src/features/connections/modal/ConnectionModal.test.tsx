@@ -38,7 +38,7 @@ describe("ConnectionModal", () => {
     await user.click(screen.getByRole("tab", { name: "Security" }));
 
     expect(screen.getByRole("tab", { name: "Security" })).toHaveAttribute("aria-selected", "true");
-    expect(screen.getByLabelText("Type")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /PLAINTEXT/ })).toBeInTheDocument();
   });
 
   it("switches to the Advanced tab when clicked", async () => {
@@ -47,7 +47,7 @@ describe("ConnectionModal", () => {
 
     await user.click(screen.getByRole("tab", { name: "Advanced" }));
 
-    expect(screen.getByLabelText("SASL mechanism")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /None/ })).toBeInTheDocument();
   });
 
   it("preserves field values entered on one tab after switching away and back", async () => {

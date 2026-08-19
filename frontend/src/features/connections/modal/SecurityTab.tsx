@@ -1,7 +1,9 @@
+import { Dropdown } from "../../../components/Dropdown";
 import { SecurityProtocol } from "../../../lib/tauri";
 import { ConnectionTabProps } from "./PropertiesTab";
 
 const SECURITY_PROTOCOLS: SecurityProtocol[] = ["PLAINTEXT", "SSL", "SASL_PLAINTEXT", "SASL_SSL"];
+const SECURITY_PROTOCOL_OPTIONS = SECURITY_PROTOCOLS.map((protocol) => ({ id: protocol, label: protocol }));
 
 export function SecurityTab({ draft, onChange, disabled = false }: ConnectionTabProps) {
   return (
@@ -9,19 +11,14 @@ export function SecurityTab({ draft, onChange, disabled = false }: ConnectionTab
       <fieldset disabled={disabled} className="connection-modal-fieldset">
         <section className="connection-modal-section">
           <h3>Broker security</h3>
-          <label>
-            Type
-            <select
-              value={draft.securityProtocol}
-              onChange={(e) => onChange({ securityProtocol: e.target.value as SecurityProtocol })}
-            >
-              {SECURITY_PROTOCOLS.map((protocol) => (
-                <option key={protocol} value={protocol}>
-                  {protocol}
-                </option>
-              ))}
-            </select>
-          </label>
+          <Dropdown
+            label="Type"
+            ariaLabel="Type"
+            options={SECURITY_PROTOCOL_OPTIONS}
+            displayedId={draft.securityProtocol}
+            appliedId={draft.securityProtocol}
+            onCommit={(id) => onChange({ securityProtocol: id as SecurityProtocol })}
+          />
           <label>
             Truststore location
             <input

@@ -1,7 +1,7 @@
 import { THEMES } from "../theme/themes";
 import { useThemeStore } from "../theme/useThemeStore";
 import { FONT_FAMILIES, FONT_SIZE_OPTIONS_PX } from "./fonts";
-import { SettingsDropdown } from "./SettingsDropdown";
+import { Dropdown } from "../../components/Dropdown";
 import { activeFontFamilyId, usePreferencesStore } from "./usePreferencesStore";
 
 const THEME_OPTIONS = THEMES.map((theme) => ({ id: theme.id, label: theme.label }));
@@ -25,7 +25,7 @@ export function SettingsPanel() {
     <div className="settings-panel">
       <h2>Settings</h2>
 
-      <SettingsDropdown
+      <Dropdown
         label="Theme"
         ariaLabel="Theme"
         options={THEME_OPTIONS}
@@ -34,7 +34,7 @@ export function SettingsPanel() {
         onCommit={setAppliedTheme}
       />
 
-      <SettingsDropdown
+      <Dropdown
         label="Font style"
         ariaLabel="Font style"
         options={FONT_FAMILY_OPTIONS}
@@ -44,7 +44,7 @@ export function SettingsPanel() {
         onPreview={setPreviewFontFamily}
       />
 
-      <SettingsDropdown
+      <Dropdown
         label="Font size"
         ariaLabel="Font size"
         options={FONT_SIZE_OPTIONS}

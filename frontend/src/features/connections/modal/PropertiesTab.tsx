@@ -1,7 +1,10 @@
+import { Dropdown } from "../../../components/Dropdown";
 import { KAFKA_VERSIONS } from "../../../lib/tauri";
 import { usePingBootstrapServers, usePingZookeeper } from "../useConnections";
 import { ConnectionDraft } from "./draft";
 import { PingResult } from "./PingResult";
+
+const KAFKA_VERSION_OPTIONS = KAFKA_VERSIONS.map((version) => ({ id: version, label: version }));
 
 export interface ConnectionTabProps {
   draft: ConnectionDraft;
@@ -42,16 +45,14 @@ export function PropertiesTab({ draft, onChange, disabled = false }: ConnectionT
             </div>
           </label>
           <PingResult mutation={pingBootstrap} failureMessage="Unable to reach bootstrap servers" />
-          <label>
-            Kafka cluster version
-            <select value={draft.kafkaVersion} onChange={(e) => onChange({ kafkaVersion: e.target.value })}>
-              {KAFKA_VERSIONS.map((version) => (
-                <option key={version} value={version}>
-                  {version}
-                </option>
-              ))}
-            </select>
-          </label>
+          <Dropdown
+            label="Kafka cluster version"
+            ariaLabel="Kafka cluster version"
+            options={KAFKA_VERSION_OPTIONS}
+            displayedId={draft.kafkaVersion}
+            appliedId={draft.kafkaVersion}
+            onCommit={(id) => onChange({ kafkaVersion: id })}
+          />
         </fieldset>
       </section>
 

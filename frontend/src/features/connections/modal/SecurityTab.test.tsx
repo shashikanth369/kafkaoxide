@@ -7,14 +7,18 @@ import { SecurityTab } from "./SecurityTab";
 describe("SecurityTab", () => {
   it("renders a broker security type dropdown defaulting to Plaintext", () => {
     render(<SecurityTab draft={emptyDraft()} onChange={vi.fn()} />);
-    expect(screen.getByLabelText("Type")).toHaveValue("PLAINTEXT");
+    expect(screen.getByRole("button", { name: /PLAINTEXT/ })).toBeInTheDocument();
   });
 
-  it("offers Plaintext, SSL, SASL Plaintext, and SASL SSL as options", () => {
+  it("offers Plaintext, SSL, SASL Plaintext, and SASL SSL as options", async () => {
+    const user = userEvent.setup();
     render(<SecurityTab draft={emptyDraft()} onChange={vi.fn()} />);
-    const select = screen.getByLabelText("Type") as HTMLSelectElement;
-    const values = Array.from(select.options).map((o) => o.value);
-    expect(values).toEqual(["PLAINTEXT", "SSL", "SASL_PLAINTEXT", "SASL_SSL"]);
+
+    await user.click(screen.getByRole("button", { name: /PLAINTEXT/ }));
+
+    expect(screen.getByRole("option", { name: "SSL" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "SASL_PLAINTEXT" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "SASL_SSL" })).toBeInTheDocument();
   });
 
   it("calls onChange with the selected security protocol", async () => {
@@ -22,14 +26,15 @@ describe("SecurityTab", () => {
     const user = userEvent.setup();
     render(<SecurityTab draft={emptyDraft()} onChange={onChange} />);
 
-    await user.selectOptions(screen.getByLabelText("Type"), "SASL_SSL");
+    await user.click(screen.getByRole("button", { name: /PLAINTEXT/ }));
+    await user.click(screen.getByRole("option", { name: "SASL_SSL" }));
 
     expect(onChange).toHaveBeenCalledWith({ securityProtocol: "SASL_SSL" });
   });
 
   it("disables the type dropdown when disabled is true", () => {
     render(<SecurityTab draft={emptyDraft()} onChange={vi.fn()} disabled />);
-    expect(screen.getByLabelText("Type")).toBeDisabled();
+    expect(screen.getByRole("button", { name: /PLAINTEXT/ })).toBeDisabled();
   });
 
   it("renders the broker SSL truststore/keystore fields", () => {

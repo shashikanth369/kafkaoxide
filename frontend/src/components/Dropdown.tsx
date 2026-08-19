@@ -1,16 +1,16 @@
 import { KeyboardEvent as ReactKeyboardEvent, useEffect, useRef, useState } from "react";
 
-export interface SettingsDropdownOption {
+export interface DropdownOption {
   id: string;
   label: string;
 }
 
-export interface SettingsDropdownProps {
+export interface DropdownProps {
   /** The field label shown above the dropdown. */
   label: string;
   /** aria-label on the listbox itself. */
   ariaLabel: string;
-  options: SettingsDropdownOption[];
+  options: DropdownOption[];
   /** id whose label shows on the toggle button — differs from appliedId while previewing. */
   displayedId: string;
   /** id that gets the checkmark and is treated as the keyboard-nav starting point. */
@@ -20,16 +20,17 @@ export interface SettingsDropdownProps {
   onPreview?: (id: string | null) => void;
 }
 
-/** The Settings panel's shared custom dropdown — a button + listbox (not a native `<select>`) so Theme, Font style, and Font size all look and behave identically, with checkmarks and optional live hover-preview. */
-export function SettingsDropdown({
-  label,
-  ariaLabel,
-  options,
-  displayedId,
-  appliedId,
-  onCommit,
-  onPreview,
-}: SettingsDropdownProps) {
+/**
+ * The app's shared custom dropdown — a button + listbox (not a native
+ * `<select>`), used everywhere a dropdown appears (Settings' Theme/Font
+ * style/Font size, the New Connection modal's Type/SASL mechanism/Kafka
+ * version) so they all look and behave identically: checkmark on the
+ * applied option, optional live hover-preview, keyboard nav, and — unlike a
+ * native `<select>`, whose native popup can open upward when there's no
+ * room below — the listbox is always positioned directly under the toggle
+ * button via `position: absolute; top: 100%`, so it always opens downward.
+ */
+export function Dropdown({ label, ariaLabel, options, displayedId, appliedId, onCommit, onPreview }: DropdownProps) {
   const [open, setOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const toggleButtonRef = useRef<HTMLButtonElement>(null);
@@ -109,9 +110,9 @@ export function SettingsDropdown({
   }
 
   return (
-    <div className="settings-field">
+    <div className="dropdown-field">
       <span>{label}</span>
-      <div className="settings-dropdown" ref={dropdownRef}>
+      <div className="dropdown" ref={dropdownRef}>
         <button
           type="button"
           ref={toggleButtonRef}

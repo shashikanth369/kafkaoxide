@@ -25,17 +25,19 @@ describe("PropertiesTab", () => {
 
     expect(screen.getByLabelText("Cluster name")).toBeInTheDocument();
     expect(screen.getByLabelText("Bootstrap servers")).toBeInTheDocument();
-    expect(screen.getByLabelText("Kafka cluster version")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /3\.7/ })).toBeInTheDocument();
   });
 
-  it("lists 0.11 through 3.7 as kafka version options", () => {
+  it("lists 0.11 through 3.7 as kafka version options", async () => {
+    const user = userEvent.setup();
     renderWithClient(<PropertiesTab draft={emptyDraft()} onChange={vi.fn()} />);
-    const select = screen.getByLabelText("Kafka cluster version") as HTMLSelectElement;
-    const values = Array.from(select.options).map((o) => o.value);
-    expect(values[0]).toBe("0.11");
-    expect(values).toContain("2.9");
-    expect(values).toContain("3.0");
-    expect(values[values.length - 1]).toBe("3.7");
+
+    await user.click(screen.getByRole("button", { name: /3\.7/ }));
+
+    expect(screen.getByRole("option", { name: "0.11" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "2.9" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "3.0" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "✓ 3.7" })).toBeInTheDocument();
   });
 
   it("calls onChange when the cluster name is typed", async () => {
@@ -116,7 +118,7 @@ describe("PropertiesTab", () => {
 
     expect(screen.getByLabelText("Cluster name")).toBeEnabled();
     expect(screen.getByLabelText("Bootstrap servers")).toBeDisabled();
-    expect(screen.getByLabelText("Kafka cluster version")).toBeDisabled();
+    expect(screen.getByRole("button", { name: /3\.7/ })).toBeDisabled();
     expect(screen.getByLabelText("Enable Zookeeper")).toBeDisabled();
     expect(screen.getByLabelText("Zookeeper host")).toBeDisabled();
     expect(screen.getByLabelText("Zookeeper port")).toBeDisabled();
