@@ -27,20 +27,24 @@ export function ResizableShell({ left, middle, right, storageKey = "kafkaoxide.p
       <div className="resizable-pane resizable-pane--middle" data-testid="resizable-pane-middle">
         {middle}
       </div>
-      <div
-        className="resizable-divider"
-        role="separator"
-        aria-orientation="vertical"
-        aria-label="Resize right panel"
-        onPointerDown={startResizingRight}
-      />
-      <div
-        className="resizable-pane resizable-pane--right"
-        data-testid="resizable-pane-right"
-        style={{ width: rightWidth }}
-      >
-        {right ?? <p className="resizable-pane-placeholder">Select a message to view its payload.</p>}
-      </div>
+      {right && (
+        <>
+          <div
+            className="resizable-divider"
+            role="separator"
+            aria-orientation="vertical"
+            aria-label="Resize right panel"
+            onPointerDown={startResizingRight}
+          />
+          <div
+            className="resizable-pane resizable-pane--right"
+            data-testid="resizable-pane-right"
+            style={{ width: rightWidth }}
+          >
+            {right}
+          </div>
+        </>
+      )}
     </div>
   );
 }

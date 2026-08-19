@@ -64,12 +64,12 @@ describe("ResizableShell", () => {
     expect(screen.getByTestId("resizable-pane-right")).toHaveStyle({ width: "280px" });
   });
 
-  it("keeps the right pane (and its resize handle) present with a placeholder when no content is given", () => {
+  it("omits the right pane and its resize handle entirely when no content is given", () => {
     render(
       <ResizableShell storageKey="test-shell-5" left={<div>Left</div>} middle={<div>Middle</div>} />,
     );
 
-    expect(screen.getByTestId("resizable-pane-right")).toBeInTheDocument();
-    expect(screen.getByRole("separator", { name: "Resize right panel" })).toBeInTheDocument();
+    expect(screen.queryByTestId("resizable-pane-right")).not.toBeInTheDocument();
+    expect(screen.queryByRole("separator", { name: "Resize right panel" })).not.toBeInTheDocument();
   });
 });

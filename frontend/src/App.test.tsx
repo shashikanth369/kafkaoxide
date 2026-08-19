@@ -63,4 +63,18 @@ describe("App", () => {
     expect(screen.queryByRole("heading", { name: "Settings" })).not.toBeInTheDocument();
     expect(screen.getByText("Select a cluster, broker, or topic.")).toBeInTheDocument();
   });
+
+  it("does not render the right pane until a message is selected", async () => {
+    const { invoke } = await import("@tauri-apps/api/core");
+    vi.mocked(invoke).mockImplementation((command: string) => {
+      if (command === "tab_list") return Promise.resolve([]);
+      if (command === "connection_list") return Promise.resolve([]);
+      return Promise.reject(new Error(`unexpected command ${command}`));
+    });
+
+    render(<App />);
+    await screen.findByText("No connections yet. Add one to get started.");
+
+    expect(screen.queryByTestId("resizable-pane-right")).not.toBeInTheDocument();
+  });
 });

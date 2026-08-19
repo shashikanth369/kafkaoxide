@@ -17,6 +17,7 @@ import { useWorkspaceSelectionStore } from "./features/workspace/useWorkspaceSel
 import { PreferencesProvider } from "./features/settings/PreferencesProvider";
 import { SettingsPanel } from "./features/settings/SettingsPanel";
 import { useSettingsPanelStore } from "./features/settings/useSettingsPanelStore";
+import { useMessageViewerStore } from "./features/workspace/useMessageViewerStore";
 import "./styles/themes.css";
 import "./styles/global.css";
 
@@ -29,6 +30,7 @@ function AppShell() {
   const selection = useWorkspaceSelectionStore((s) => s.selection);
   const settingsOpen = useSettingsPanelStore((s) => s.isOpen);
   const openSettings = useSettingsPanelStore((s) => s.open);
+  const hasSelectedMessage = useMessageViewerStore((s) => s.message !== null);
 
   useEffect(() => {
     loadTabs();
@@ -80,7 +82,7 @@ function AppShell() {
               </main>
             )
           }
-          right={<MessagePayloadViewer />}
+          right={hasSelectedMessage ? <MessagePayloadViewer /> : undefined}
         />
       </div>
       <BottomPanel />
