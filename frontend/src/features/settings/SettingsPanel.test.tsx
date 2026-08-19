@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { SettingsPanel } from "./SettingsPanel";
 import { usePreferencesStore } from "./usePreferencesStore";
@@ -19,11 +19,11 @@ beforeEach(() => {
 });
 
 describe("SettingsPanel", () => {
-  it("renders the theme dropdown, font family dropdown, and font size dropdown", () => {
+  it("renders the theme, font style, and font size dropdowns as matching button+listbox controls", () => {
     render(<SettingsPanel />);
-    expect(screen.getByLabelText("Theme")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Zed Dark/ })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /System UI/ })).toBeInTheDocument();
-    expect(screen.getByLabelText("Font size")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: `${DEFAULT_FONT_SIZE_PX}px ▾` })).toBeInTheDocument();
   });
 
   it("marks the applied font family with a checkmark when the dropdown is open", async () => {
@@ -60,13 +60,34 @@ describe("SettingsPanel", () => {
     expect(usePreferencesStore.getState().appliedFontFamilyId).toBe("inter");
   });
 
-  it("commits a font size change immediately", () => {
+  it("commits a font size change on click, same as the other dropdowns", async () => {
+    const user = userEvent.setup();
     render(<SettingsPanel />);
-    const select = screen.getByLabelText("Font size") as HTMLSelectElement;
 
-    fireEvent.change(select, { target: { value: String(DEFAULT_FONT_SIZE_PX + 1) } });
+    await user.click(screen.getByRole("button", { name: `${DEFAULT_FONT_SIZE_PX}px ▾` }));
+    await user.click(screen.getByRole("option", { name: `${DEFAULT_FONT_SIZE_PX + 1}px` }));
 
     expect(usePreferencesStore.getState().fontSizePx).toBe(DEFAULT_FONT_SIZE_PX + 1);
+  });
+
+  it("marks the currently applied theme with a checkmark when the dropdown is open", async () => {
+    const user = userEvent.setup();
+    render(<SettingsPanel />);
+
+    await user.click(screen.getByRole("button", { name: /Zed Dark/ }));
+
+    expect(screen.getByRole("option", { name: "✓ Zed Dark" })).toBeInTheDocument();
+  });
+
+  it("applies the selected theme immediately and persists it", async () => {
+    const user = userEvent.setup();
+    render(<SettingsPanel />);
+
+    await user.click(screen.getByRole("button", { name: /Zed Dark/ }));
+    await user.click(screen.getByRole("option", { name: "Zed Light" }));
+
+    expect(useThemeStore.getState().appliedThemeId).toBe("zed-light");
+    expect(localStorage.getItem("kafkaoxide.theme")).toBe("zed-light");
   });
 
   it("closes the font menu when clicking outside of it", async () => {
@@ -74,11 +95,11 @@ describe("SettingsPanel", () => {
     render(<SettingsPanel />);
 
     await user.click(screen.getByRole("button", { name: /System UI/ }));
-    expect(screen.getByRole("listbox")).toBeInTheDocument();
+    expect(screen.getByRole("listbox", { name: "Font style" })).toBeInTheDocument();
 
     await user.click(screen.getByText("Settings"));
 
-    expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+    expect(screen.queryByRole("listbox", { name: "Font style" })).not.toBeInTheDocument();
   });
 
   it("closes the font menu on Escape", async () => {
@@ -86,11 +107,11 @@ describe("SettingsPanel", () => {
     render(<SettingsPanel />);
 
     await user.click(screen.getByRole("button", { name: /System UI/ }));
-    expect(screen.getByRole("listbox")).toBeInTheDocument();
+    expect(screen.getByRole("listbox", { name: "Font style" })).toBeInTheDocument();
 
     await user.keyboard("{Escape}");
 
-    expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+    expect(screen.queryByRole("listbox", { name: "Font style" })).not.toBeInTheDocument();
   });
 
   it("selects a font family via keyboard navigation (ArrowDown + Enter)", async () => {
@@ -101,5 +122,15 @@ describe("SettingsPanel", () => {
     await user.keyboard("{ArrowDown}{Enter}");
 
     expect(usePreferencesStore.getState().appliedFontFamilyId).toBe("inter");
+  });
+
+  it("selects a theme via keyboard navigation (ArrowDown + Enter)", async () => {
+    const user = userEvent.setup();
+    render(<SettingsPanel />);
+
+    await user.click(screen.getByRole("button", { name: /Zed Dark/ }));
+    await user.keyboard("{ArrowDown}{Enter}");
+
+    expect(useThemeStore.getState().appliedThemeId).toBe("zed-light");
   });
 });
