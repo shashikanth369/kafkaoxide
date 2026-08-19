@@ -40,6 +40,7 @@ export interface Connection {
   zookeeperChrootPath: string | null;
   securityProtocol: SecurityProtocol;
   saslMechanism: SaslMechanism | null;
+  saslUsername: string | null;
   saslOauthUrl: string | null;
   schemaRegistryEndpoint: string | null;
   schemaRegistryTrustStoreLocation: string | null;
@@ -60,6 +61,8 @@ export interface NewConnection {
   zookeeperChrootPath: string | null;
   securityProtocol: SecurityProtocol;
   saslMechanism: SaslMechanism | null;
+  saslUsername: string | null;
+  saslPassword: string | null;
   saslOauthUrl: string | null;
   schemaRegistryEndpoint: string | null;
   schemaRegistryBasicAuthCredentials: string | null;

@@ -18,6 +18,7 @@ struct ConnectionRow {
     zookeeper_chroot_path: Option<String>,
     security_protocol: String,
     sasl_mechanism: Option<String>,
+    sasl_username: Option<String>,
     sasl_oauth_url: Option<String>,
     schema_registry_endpoint: Option<String>,
     schema_registry_trust_store_location: Option<String>,
@@ -51,6 +52,7 @@ impl ConnectionRow {
             zookeeper_chroot_path: self.zookeeper_chroot_path,
             security_protocol,
             sasl_mechanism,
+            sasl_username: self.sasl_username,
             sasl_oauth_url: self.sasl_oauth_url,
             schema_registry_endpoint: self.schema_registry_endpoint,
             schema_registry_trust_store_location: self.schema_registry_trust_store_location,
@@ -73,12 +75,12 @@ pub async fn create(pool: &SqlitePool, new_conn: &NewConnection) -> Result<Conne
         "INSERT INTO connections (
              id, name, bootstrap_servers, kafka_version,
              zookeeper_enabled, zookeeper_host, zookeeper_port, zookeeper_chroot_path,
-             security_protocol, sasl_mechanism, sasl_oauth_url,
+             security_protocol, sasl_mechanism, sasl_username, sasl_oauth_url,
              schema_registry_endpoint, schema_registry_trust_store_location, schema_registry_keystore_location,
              ssl_truststore_location, ssl_keystore_location,
              created_at, updated_at
          )
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?17)",
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?18)",
     )
     .bind(&id)
     .bind(&new_conn.name)
@@ -90,6 +92,7 @@ pub async fn create(pool: &SqlitePool, new_conn: &NewConnection) -> Result<Conne
     .bind(&new_conn.zookeeper_chroot_path)
     .bind(&security_protocol)
     .bind(&sasl_mechanism)
+    .bind(&new_conn.sasl_username)
     .bind(&new_conn.sasl_oauth_url)
     .bind(&new_conn.schema_registry_endpoint)
     .bind(&new_conn.schema_registry_trust_store_location)
@@ -143,11 +146,11 @@ pub async fn update(pool: &SqlitePool, id: &str, new_conn: &NewConnection) -> Re
         "UPDATE connections SET
              name = ?1, bootstrap_servers = ?2, kafka_version = ?3,
              zookeeper_enabled = ?4, zookeeper_host = ?5, zookeeper_port = ?6, zookeeper_chroot_path = ?7,
-             security_protocol = ?8, sasl_mechanism = ?9, sasl_oauth_url = ?10,
-             schema_registry_endpoint = ?11, schema_registry_trust_store_location = ?12, schema_registry_keystore_location = ?13,
-             ssl_truststore_location = ?14, ssl_keystore_location = ?15,
-             updated_at = ?16
-         WHERE id = ?17",
+             security_protocol = ?8, sasl_mechanism = ?9, sasl_username = ?10, sasl_oauth_url = ?11,
+             schema_registry_endpoint = ?12, schema_registry_trust_store_location = ?13, schema_registry_keystore_location = ?14,
+             ssl_truststore_location = ?15, ssl_keystore_location = ?16,
+             updated_at = ?17
+         WHERE id = ?18",
     )
     .bind(&new_conn.name)
     .bind(&new_conn.bootstrap_servers)
@@ -158,6 +161,7 @@ pub async fn update(pool: &SqlitePool, id: &str, new_conn: &NewConnection) -> Re
     .bind(&new_conn.zookeeper_chroot_path)
     .bind(&security_protocol)
     .bind(&sasl_mechanism)
+    .bind(&new_conn.sasl_username)
     .bind(&new_conn.sasl_oauth_url)
     .bind(&new_conn.schema_registry_endpoint)
     .bind(&new_conn.schema_registry_trust_store_location)
@@ -220,6 +224,8 @@ mod tests {
             zookeeper_chroot_path: None,
             security_protocol: SecurityProtocol::Plaintext,
             sasl_mechanism: None,
+            sasl_username: None,
+            sasl_password: None,
             sasl_oauth_url: None,
             schema_registry_endpoint: None,
             schema_registry_basic_auth_credentials: None,
@@ -260,6 +266,7 @@ mod tests {
         new_conn.zookeeper_host = Some("zk.local".to_string());
         new_conn.zookeeper_port = Some(2181);
         new_conn.zookeeper_chroot_path = Some("/kafka".to_string());
+        new_conn.sasl_username = Some("kafka-user".to_string());
         new_conn.sasl_oauth_url = Some("https://idp.example.com/token".to_string());
         new_conn.schema_registry_endpoint = Some("https://schema-registry.local".to_string());
         new_conn.schema_registry_trust_store_location = Some("/etc/ts.jks".to_string());
@@ -274,6 +281,7 @@ mod tests {
         assert_eq!(created.zookeeper_host.as_deref(), Some("zk.local"));
         assert_eq!(created.zookeeper_port, Some(2181));
         assert_eq!(created.zookeeper_chroot_path.as_deref(), Some("/kafka"));
+        assert_eq!(created.sasl_username.as_deref(), Some("kafka-user"));
         assert_eq!(
             created.sasl_oauth_url.as_deref(),
             Some("https://idp.example.com/token")
@@ -295,6 +303,7 @@ mod tests {
     async fn does_not_persist_secret_fields() {
         let pool = test_pool().await;
         let mut new_conn = plaintext_connection("Secretive");
+        new_conn.sasl_password = Some("sasl-secret".to_string());
         new_conn.schema_registry_basic_auth_credentials = Some("user:pass".to_string());
         new_conn.schema_registry_trust_store_password = Some("ts-secret".to_string());
         new_conn.schema_registry_keystore_password = Some("ks-secret".to_string());
@@ -306,6 +315,7 @@ mod tests {
         let created = create(&pool, &new_conn).await.unwrap();
         let json = serde_json::to_string(&created).unwrap();
 
+        assert!(!json.contains("sasl-secret"));
         assert!(!json.contains("user:pass"));
         assert!(!json.contains("ts-secret"));
         assert!(!json.contains("ks-secret"));

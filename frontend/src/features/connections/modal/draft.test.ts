@@ -76,6 +76,8 @@ describe("toNewConnection", () => {
     expect(result.zookeeperPort).toBeNull();
     expect(result.zookeeperChrootPath).toBeNull();
     expect(result.saslMechanism).toBeNull();
+    expect(result.saslUsername).toBeNull();
+    expect(result.saslPassword).toBeNull();
     expect(result.saslOauthUrl).toBeNull();
     expect(result.schemaRegistryEndpoint).toBeNull();
     expect(result.schemaRegistryBasicAuthCredentials).toBeNull();
@@ -119,6 +121,20 @@ describe("toNewConnection", () => {
     draft.saslMechanism = "SCRAM-SHA-512";
 
     expect(toNewConnection(draft).saslMechanism).toBe("SCRAM-SHA-512");
+  });
+
+  it("trims the sasl username and carries the password through", () => {
+    const draft = emptyDraft();
+    draft.name = "Local";
+    draft.bootstrapServers = "localhost:9092";
+    draft.saslMechanism = "PLAIN";
+    draft.saslUsername = "  kafka-user  ";
+    draft.saslPassword = "hunter2";
+
+    const result = toNewConnection(draft);
+
+    expect(result.saslUsername).toBe("kafka-user");
+    expect(result.saslPassword).toBe("hunter2");
   });
 
   it("carries all schema registry fields through, trimmed", () => {
@@ -176,6 +192,7 @@ function sampleConnection(overrides: Partial<Connection> = {}): Connection {
     zookeeperChrootPath: "/kafka",
     securityProtocol: "SASL_SSL",
     saslMechanism: "SCRAM-SHA-512",
+    saslUsername: "kafka-user",
     saslOauthUrl: "https://idp.example.com/token",
     schemaRegistryEndpoint: "https://schema-registry.local",
     schemaRegistryTrustStoreLocation: "/etc/ts.jks",
@@ -201,6 +218,7 @@ describe("connectionToDraft", () => {
     expect(draft.zookeeperChrootPath).toBe("/kafka");
     expect(draft.securityProtocol).toBe("SASL_SSL");
     expect(draft.saslMechanism).toBe("SCRAM-SHA-512");
+    expect(draft.saslUsername).toBe("kafka-user");
     expect(draft.saslOauthUrl).toBe("https://idp.example.com/token");
     expect(draft.schemaRegistryEndpoint).toBe("https://schema-registry.local");
     expect(draft.schemaRegistryTrustStoreLocation).toBe("/etc/ts.jks");
@@ -212,6 +230,7 @@ describe("connectionToDraft", () => {
   it("leaves every secret field blank, since Connection never carries secrets", () => {
     const draft = connectionToDraft(sampleConnection());
 
+    expect(draft.saslPassword).toBe("");
     expect(draft.schemaRegistryBasicAuthCredentials).toBe("");
     expect(draft.schemaRegistryTrustStorePassword).toBe("");
     expect(draft.schemaRegistryKeystorePassword).toBe("");
@@ -240,6 +259,7 @@ describe("connectionToDraft", () => {
     expect(newConnection.zookeeperPort).toBe(connection.zookeeperPort);
     expect(newConnection.securityProtocol).toBe(connection.securityProtocol);
     expect(newConnection.saslMechanism).toBe(connection.saslMechanism);
+    expect(newConnection.saslUsername).toBe(connection.saslUsername);
   });
 });
 

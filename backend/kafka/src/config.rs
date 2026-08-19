@@ -25,6 +25,7 @@ pub fn build_client_config(
     bootstrap_servers: &str,
     security_protocol: SecurityProtocol,
     sasl_mechanism: Option<SaslMechanism>,
+    sasl_username: Option<&str>,
     password: Option<&str>,
     ssl: BrokerSslConfig<'_>,
 ) -> ClientConfig {
@@ -34,6 +35,9 @@ pub fn build_client_config(
 
     if let Some(mechanism) = sasl_mechanism {
         config.set("sasl.mechanism", mechanism.to_string());
+        if let Some(username) = sasl_username {
+            config.set("sasl.username", username);
+        }
         if let Some(password) = password {
             config.set("sasl.password", password);
         }
@@ -55,16 +59,18 @@ pub fn build_client_config(
     config
 }
 
-/// Builds a `ClientConfig` for a saved connection. `ssl_truststore_location`/
-/// `ssl_keystore_location` come straight from the connection (not secrets);
-/// the keystore passwords aren't retrieved from the OS keychain here yet —
-/// same scope boundary as the SASL `password` parameter above, which every
-/// caller of this function currently passes as `None` too.
+/// Builds a `ClientConfig` for a saved connection. `sasl_username` and
+/// `ssl_truststore_location`/`ssl_keystore_location` come straight from the
+/// connection (not secrets); `password` is the connection's SASL password,
+/// looked up from the OS keychain by the Tauri command layer. The broker
+/// keystore passwords aren't retrieved from the keychain here yet — same
+/// scope boundary, just not wired up for that field yet.
 pub fn client_config(connection: &Connection, password: Option<&str>) -> ClientConfig {
     build_client_config(
         &connection.bootstrap_servers,
         connection.security_protocol,
         connection.sasl_mechanism,
+        connection.sasl_username.as_deref(),
         password,
         BrokerSslConfig {
             truststore_location: connection.ssl_truststore_location.as_deref(),
@@ -92,6 +98,7 @@ mod tests {
             zookeeper_chroot_path: None,
             security_protocol: SecurityProtocol::SaslSsl,
             sasl_mechanism: Some(SaslMechanism::ScramSha256),
+            sasl_username: Some("kafka-user".into()),
             sasl_oauth_url: None,
             schema_registry_endpoint: None,
             schema_registry_trust_store_location: None,
@@ -114,7 +121,17 @@ mod tests {
     fn builds_sasl_fields_when_password_given() {
         let config = client_config(&sample_connection(), Some("hunter2"));
         assert_eq!(config.get("sasl.mechanism"), Some("SCRAM-SHA-256"));
+        assert_eq!(config.get("sasl.username"), Some("kafka-user"));
         assert_eq!(config.get("sasl.password"), Some("hunter2"));
+    }
+
+    #[test]
+    fn omits_sasl_username_when_a_saved_connection_has_none() {
+        let mut connection = sample_connection();
+        connection.sasl_username = None;
+
+        let config = client_config(&connection, Some("hunter2"));
+        assert_eq!(config.get("sasl.username"), None);
     }
 
     #[test]
@@ -145,6 +162,7 @@ mod tests {
             SecurityProtocol::Ssl,
             None,
             None,
+            None,
             BrokerSslConfig {
                 truststore_location: Some("/etc/broker-ts.pem"),
                 keystore_location: Some("/etc/broker-ks.p12"),
@@ -164,6 +182,7 @@ mod tests {
         let config = build_client_config(
             "localhost:9092",
             SecurityProtocol::Plaintext,
+            None,
             None,
             None,
             BrokerSslConfig::default(),

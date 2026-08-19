@@ -12,6 +12,8 @@ export function sampleNewConnection(overrides: Partial<NewConnection> = {}): New
     zookeeperChrootPath: null,
     securityProtocol: "PLAINTEXT",
     saslMechanism: null,
+    saslUsername: null,
+    saslPassword: null,
     saslOauthUrl: null,
     schemaRegistryEndpoint: null,
     schemaRegistryBasicAuthCredentials: null,

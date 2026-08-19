@@ -50,6 +50,10 @@ pub struct Connection {
     pub zookeeper_chroot_path: Option<String>,
     pub security_protocol: SecurityProtocol,
     pub sasl_mechanism: Option<SaslMechanism>,
+    /// Not a secret — the matching `sasl_password` lives only in the OS
+    /// keychain (see `NewConnection` below), same split as the SSL
+    /// location/password fields.
+    pub sasl_username: Option<String>,
     pub sasl_oauth_url: Option<String>,
     pub schema_registry_endpoint: Option<String>,
     pub schema_registry_trust_store_location: Option<String>,
@@ -79,6 +83,8 @@ pub struct NewConnection {
     pub zookeeper_chroot_path: Option<String>,
     pub security_protocol: SecurityProtocol,
     pub sasl_mechanism: Option<SaslMechanism>,
+    pub sasl_username: Option<String>,
+    pub sasl_password: Option<String>,
     pub sasl_oauth_url: Option<String>,
     pub schema_registry_endpoint: Option<String>,
     pub schema_registry_basic_auth_credentials: Option<String>,
@@ -111,6 +117,8 @@ impl fmt::Debug for NewConnection {
             .field("zookeeper_chroot_path", &self.zookeeper_chroot_path)
             .field("security_protocol", &self.security_protocol)
             .field("sasl_mechanism", &self.sasl_mechanism)
+            .field("sasl_username", &self.sasl_username)
+            .field("sasl_password", &redacted(&self.sasl_password))
             .field("sasl_oauth_url", &self.sasl_oauth_url)
             .field("schema_registry_endpoint", &self.schema_registry_endpoint)
             .field(
@@ -199,6 +207,7 @@ mod tests {
             zookeeper_chroot_path: None,
             security_protocol: SecurityProtocol::Plaintext,
             sasl_mechanism: None,
+            sasl_username: None,
             sasl_oauth_url: None,
             schema_registry_endpoint: None,
             schema_registry_trust_store_location: None,
@@ -221,6 +230,8 @@ mod tests {
             zookeeper_chroot_path: None,
             security_protocol: SecurityProtocol::Plaintext,
             sasl_mechanism: None,
+            sasl_username: None,
+            sasl_password: None,
             sasl_oauth_url: None,
             schema_registry_endpoint: None,
             schema_registry_basic_auth_credentials: None,
@@ -251,6 +262,7 @@ mod tests {
     #[test]
     fn new_connection_debug_output_never_contains_any_of_the_real_secrets() {
         let mut new_connection = sample_new_connection();
+        new_connection.sasl_password = Some("sasl-secret".into());
         new_connection.schema_registry_basic_auth_credentials = Some("user:super-secret-value".into());
         new_connection.schema_registry_trust_store_password = Some("trust-store-secret".into());
         new_connection.schema_registry_keystore_password = Some("keystore-secret".into());
@@ -261,6 +273,7 @@ mod tests {
 
         let debug_output = format!("{:?}", new_connection);
 
+        assert!(!debug_output.contains("sasl-secret"));
         assert!(!debug_output.contains("super-secret-value"));
         assert!(!debug_output.contains("trust-store-secret"));
         assert!(!debug_output.contains("keystore-secret"));
@@ -268,7 +281,7 @@ mod tests {
         assert!(!debug_output.contains("broker-trust-store-secret"));
         assert!(!debug_output.contains("broker-keystore-secret"));
         assert!(!debug_output.contains("broker-keystore-key-secret"));
-        assert_eq!(debug_output.matches("[redacted]").count(), 7);
+        assert_eq!(debug_output.matches("[redacted]").count(), 8);
     }
 
     #[test]

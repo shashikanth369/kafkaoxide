@@ -1,37 +1,9 @@
-import { Dropdown } from "../../../components/Dropdown";
-import { SaslMechanism } from "../../../lib/tauri";
 import { ConnectionTabProps } from "./PropertiesTab";
-
-const SASL_MECHANISMS: SaslMechanism[] = ["PLAIN", "SCRAM-SHA-256", "SCRAM-SHA-512"];
-const SASL_MECHANISM_OPTIONS = [
-  { id: "", label: "None" },
-  ...SASL_MECHANISMS.map((mechanism) => ({ id: mechanism, label: mechanism })),
-];
 
 export function AdvancedTab({ draft, onChange, disabled = false }: ConnectionTabProps) {
   return (
     <div role="tabpanel" aria-label="Advanced" className="connection-modal-tab-panel">
       <fieldset disabled={disabled} className="connection-modal-fieldset">
-        <section className="connection-modal-section">
-          <h3>Advanced</h3>
-          <Dropdown
-            label="SASL mechanism"
-            ariaLabel="SASL mechanism"
-            options={SASL_MECHANISM_OPTIONS}
-            displayedId={draft.saslMechanism}
-            appliedId={draft.saslMechanism}
-            onCommit={(id) => onChange({ saslMechanism: id as SaslMechanism | "" })}
-          />
-          <label>
-            SASL OAuth/OIDC identity provider URL
-            <input
-              value={draft.saslOauthUrl}
-              onChange={(e) => onChange({ saslOauthUrl: e.target.value })}
-              placeholder="https://idp.example.com/token"
-            />
-          </label>
-        </section>
-
         <section className="connection-modal-section">
           <h3>Schema Registry</h3>
           <label>

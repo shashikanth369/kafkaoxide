@@ -1,14 +1,16 @@
 import { AdvancedTab } from "./AdvancedTab";
+import { AuthenticationTab } from "./AuthenticationTab";
 import { ConnectionDraft } from "./draft";
 import { PropertiesTab } from "./PropertiesTab";
 import { SecurityTab } from "./SecurityTab";
 
-export type ConnectionTabId = "properties" | "security" | "advanced";
+export type ConnectionTabId = "properties" | "security" | "advanced" | "authentication";
 
 export const CONNECTION_TABS: { id: ConnectionTabId; label: string }[] = [
   { id: "properties", label: "Properties" },
   { id: "security", label: "Security" },
   { id: "advanced", label: "Advanced" },
+  { id: "authentication", label: "Authentication" },
 ];
 
 export interface ConnectionTabsViewProps {
@@ -41,6 +43,9 @@ export function ConnectionTabsView({ activeTab, onTabChange, draft, onChange, di
         {activeTab === "properties" && <PropertiesTab draft={draft} onChange={onChange} disabled={disabled} />}
         {activeTab === "security" && <SecurityTab draft={draft} onChange={onChange} disabled={disabled} />}
         {activeTab === "advanced" && <AdvancedTab draft={draft} onChange={onChange} disabled={disabled} />}
+        {activeTab === "authentication" && (
+          <AuthenticationTab draft={draft} onChange={onChange} disabled={disabled} />
+        )}
       </div>
     </>
   );

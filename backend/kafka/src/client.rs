@@ -38,9 +38,8 @@ pub trait KafkaClient: Send + Sync {
 
     /// Tests full connectivity using the in-progress modal's entered
     /// values, before the connection has been saved. Backs the modal's
-    /// bottom "Test" button. Note: the New Connection modal's spec has no
-    /// SASL username field, so PLAIN/SCRAM mechanisms (which librdkafka
-    /// requires a username for) will surface as an `Err` here rather than
+    /// bottom "Test" button. PLAIN/SCRAM mechanisms with no username/
+    /// password entered will surface as an `Err` here rather than
     /// `ConnectionStatus::Unreachable` — this is a real config error, not a
     /// failed probe.
     async fn test_connection(
@@ -48,6 +47,7 @@ pub trait KafkaClient: Send + Sync {
         bootstrap_servers: &str,
         security_protocol: SecurityProtocol,
         sasl_mechanism: Option<SaslMechanism>,
+        sasl_username: Option<&str>,
         password: Option<&str>,
         ssl: BrokerSslConfig<'_>,
     ) -> Result<ConnectionStatus, AppError>;
@@ -167,6 +167,7 @@ impl KafkaClient for RdKafkaClient {
             SecurityProtocol::Plaintext,
             None,
             None,
+            None,
             BrokerSslConfig::default(),
         ))
         .await
@@ -177,6 +178,7 @@ impl KafkaClient for RdKafkaClient {
         bootstrap_servers: &str,
         security_protocol: SecurityProtocol,
         sasl_mechanism: Option<SaslMechanism>,
+        sasl_username: Option<&str>,
         password: Option<&str>,
         ssl: BrokerSslConfig<'_>,
     ) -> Result<ConnectionStatus, AppError> {
@@ -184,6 +186,7 @@ impl KafkaClient for RdKafkaClient {
             bootstrap_servers,
             security_protocol,
             sasl_mechanism,
+            sasl_username,
             password,
             ssl,
         ))
@@ -709,6 +712,7 @@ mod tests {
             zookeeper_chroot_path: None,
             security_protocol: SecurityProtocol::Plaintext,
             sasl_mechanism: None,
+            sasl_username: None,
             sasl_oauth_url: None,
             schema_registry_endpoint: None,
             schema_registry_trust_store_location: None,
@@ -745,6 +749,7 @@ mod tests {
             .test_connection(
                 "127.0.0.1:1",
                 SecurityProtocol::Plaintext,
+                None,
                 None,
                 None,
                 BrokerSslConfig::default(),
@@ -817,11 +822,11 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_connection_surfaces_a_config_error_for_sasl_mechanisms_that_need_credentials() {
-        // PLAIN/SCRAM mechanisms need sasl.username, which this app's data
-        // model does not currently collect (see the New Connection modal
-        // spec) — librdkafka refuses to even build a client, which is
-        // surfaced as an error rather than misreported as "unreachable".
+    async fn test_connection_surfaces_a_config_error_for_sasl_mechanisms_missing_a_username() {
+        // PLAIN/SCRAM mechanisms need sasl.username — if the Authentication
+        // tab's Username field was left blank, librdkafka refuses to even
+        // build a client, which is surfaced as an error rather than
+        // misreported as "unreachable".
         let client = RdKafkaClient;
         let result = client
             .test_connection(
@@ -829,9 +834,27 @@ mod tests {
                 SecurityProtocol::SaslPlaintext,
                 Some(SaslMechanism::Plain),
                 None,
+                None,
                 BrokerSslConfig::default(),
             )
             .await;
         assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_connection_probes_instead_of_erroring_once_a_username_is_given() {
+        let client = RdKafkaClient;
+        let status = client
+            .test_connection(
+                "127.0.0.1:1",
+                SecurityProtocol::SaslPlaintext,
+                Some(SaslMechanism::Plain),
+                Some("kafka-user"),
+                Some("hunter2"),
+                BrokerSslConfig::default(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(status, ConnectionStatus::Unreachable);
     }
 }

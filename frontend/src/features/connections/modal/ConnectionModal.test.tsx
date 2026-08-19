@@ -47,6 +47,15 @@ describe("ConnectionModal", () => {
 
     await user.click(screen.getByRole("tab", { name: "Advanced" }));
 
+    expect(screen.getByLabelText("Endpoint")).toBeInTheDocument();
+  });
+
+  it("switches to the Authentication tab when clicked", async () => {
+    const user = userEvent.setup();
+    renderWithClient(<ConnectionModal onAdd={vi.fn()} onCancel={vi.fn()} />);
+
+    await user.click(screen.getByRole("tab", { name: "Authentication" }));
+
     expect(screen.getByRole("button", { name: /None/ })).toBeInTheDocument();
   });
 

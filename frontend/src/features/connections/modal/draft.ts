@@ -15,6 +15,8 @@ export interface ConnectionDraft {
   zookeeperChrootPath: string;
   securityProtocol: SecurityProtocol;
   saslMechanism: SaslMechanism | "";
+  saslUsername: string;
+  saslPassword: string;
   saslOauthUrl: string;
   schemaRegistryEndpoint: string;
   schemaRegistryBasicAuthCredentials: string;
@@ -41,6 +43,8 @@ export function emptyDraft(): ConnectionDraft {
     zookeeperChrootPath: "",
     securityProtocol: "PLAINTEXT",
     saslMechanism: "",
+    saslUsername: "",
+    saslPassword: "",
     saslOauthUrl: "",
     schemaRegistryEndpoint: "",
     schemaRegistryBasicAuthCredentials: "",
@@ -94,6 +98,8 @@ export function toNewConnection(draft: ConnectionDraft): NewConnection {
     zookeeperChrootPath,
     securityProtocol: draft.securityProtocol,
     saslMechanism: draft.saslMechanism === "" ? null : draft.saslMechanism,
+    saslUsername: nullableTrim(draft.saslUsername),
+    saslPassword: nullableTrim(draft.saslPassword),
     saslOauthUrl: nullableTrim(draft.saslOauthUrl),
     schemaRegistryEndpoint: nullableTrim(draft.schemaRegistryEndpoint),
     schemaRegistryBasicAuthCredentials: nullableTrim(draft.schemaRegistryBasicAuthCredentials),
@@ -127,6 +133,8 @@ export function connectionToDraft(connection: Connection): ConnectionDraft {
     zookeeperChrootPath: connection.zookeeperChrootPath ?? "",
     securityProtocol: connection.securityProtocol,
     saslMechanism: connection.saslMechanism ?? "",
+    saslUsername: connection.saslUsername ?? "",
+    saslPassword: "",
     saslOauthUrl: connection.saslOauthUrl ?? "",
     schemaRegistryEndpoint: connection.schemaRegistryEndpoint ?? "",
     schemaRegistryBasicAuthCredentials: "",

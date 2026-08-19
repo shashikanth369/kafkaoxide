@@ -5,12 +5,6 @@ import { emptyDraft } from "./draft";
 import { AdvancedTab } from "./AdvancedTab";
 
 describe("AdvancedTab", () => {
-  it("renders the Advanced section's SASL mechanism and OAuth/OIDC URL inputs", () => {
-    render(<AdvancedTab draft={emptyDraft()} onChange={vi.fn()} />);
-    expect(screen.getByRole("button", { name: /None/ })).toBeInTheDocument();
-    expect(screen.getByLabelText("SASL OAuth/OIDC identity provider URL")).toBeInTheDocument();
-  });
-
   it("renders all seven Schema Registry fields", () => {
     render(<AdvancedTab draft={emptyDraft()} onChange={vi.fn()} />);
     expect(screen.getByLabelText("Endpoint")).toBeInTheDocument();
@@ -40,21 +34,8 @@ describe("AdvancedTab", () => {
     expect(onChange).toHaveBeenCalledWith({ schemaRegistryEndpoint: "h" });
   });
 
-  it("calls onChange with the selected sasl mechanism", async () => {
-    const onChange = vi.fn();
-    const user = userEvent.setup();
-    render(<AdvancedTab draft={emptyDraft()} onChange={onChange} />);
-
-    await user.click(screen.getByRole("button", { name: /None/ }));
-    await user.click(screen.getByRole("option", { name: "SCRAM-SHA-256" }));
-
-    expect(onChange).toHaveBeenCalledWith({ saslMechanism: "SCRAM-SHA-256" });
-  });
-
   it("disables every field when disabled is true", () => {
     render(<AdvancedTab draft={emptyDraft()} onChange={vi.fn()} disabled />);
-    expect(screen.getByRole("button", { name: /None/ })).toBeDisabled();
-    expect(screen.getByLabelText("SASL OAuth/OIDC identity provider URL")).toBeDisabled();
     expect(screen.getByLabelText("Endpoint")).toBeDisabled();
     expect(screen.getByLabelText("Keystore private key password")).toBeDisabled();
   });
