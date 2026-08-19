@@ -189,6 +189,7 @@ export function DataTab({ connectionId, topicName, partitionId }: DataTabProps) 
           columnDefs={COLUMN_DEFS}
           defaultColDef={DEFAULT_COL_DEF}
           quickFilterText={searchText}
+          overlayNoRowsTemplate="<span class='data-tab-no-rows'>No messages</span>"
           onRowClicked={(event) => {
             if (event.data) viewMessage(event.data);
           }}

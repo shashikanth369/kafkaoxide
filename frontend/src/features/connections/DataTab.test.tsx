@@ -16,12 +16,14 @@ let lastGridProps: {
   rowData: unknown[];
   onRowClicked: (event: { data: unknown }) => void;
   quickFilterText?: string;
+  overlayNoRowsTemplate?: string;
 } | null = null;
 vi.mock("ag-grid-react", () => ({
   AgGridReact: (props: {
     rowData: unknown[];
     onRowClicked: (event: { data: unknown }) => void;
     quickFilterText?: string;
+    overlayNoRowsTemplate?: string;
   }) => {
     lastGridProps = props;
     return null;
@@ -194,6 +196,11 @@ describe("DataTab", () => {
         }),
       ),
     );
+  });
+
+  it("tells the grid to show a 'No messages' overlay when there are no rows", () => {
+    renderWithClient(<DataTab connectionId="1" topicName="orders" />);
+    expect(lastGridProps?.overlayNoRowsTemplate).toContain("No messages");
   });
 
   it("passes the fetched messages to the grid as rowData", async () => {

@@ -649,6 +649,10 @@ body {
   flex: 1;
   min-height: 320px;
 }
+.data-tab-no-rows {
+  font-size: 13px;
+  color: var(--color-fg-muted);
+}
 
 .lag-panel-summary {
   display: flex;
