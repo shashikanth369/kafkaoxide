@@ -80,6 +80,14 @@ describe("BottomPanel tab memory", () => {
     expect(screen.getByText("Tab memory: Topic orders")).toBeInTheDocument();
   });
 
+  it("shows the actual cluster name for a connection selection, not a generic label", () => {
+    useWorkspaceSelectionStore.setState({
+      selection: { type: "connection", id: "1", name: "Local Kafka" },
+    });
+    render(<BottomPanel />);
+    expect(screen.getByText("Tab memory: Cluster Local Kafka")).toBeInTheDocument();
+  });
+
   it("clears both the selection and the message viewer for the active tab when Clear memory is clicked", async () => {
     useWorkspaceSelectionStore.setState({
       activeTabId: "tab-1",

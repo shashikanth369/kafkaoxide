@@ -11,18 +11,26 @@ describe("useWorkspaceSelectionStore", () => {
   });
 
   it("selects a connection", () => {
-    useWorkspaceSelectionStore.getState().selectConnection("conn-1");
-    expect(useWorkspaceSelectionStore.getState().selection).toEqual({ type: "connection", id: "conn-1" });
+    useWorkspaceSelectionStore.getState().selectConnection("conn-1", "Local Kafka");
+    expect(useWorkspaceSelectionStore.getState().selection).toEqual({
+      type: "connection",
+      id: "conn-1",
+      name: "Local Kafka",
+    });
   });
 
   it("replaces the previous selection when a different connection is selected", () => {
-    useWorkspaceSelectionStore.getState().selectConnection("conn-1");
-    useWorkspaceSelectionStore.getState().selectConnection("conn-2");
-    expect(useWorkspaceSelectionStore.getState().selection).toEqual({ type: "connection", id: "conn-2" });
+    useWorkspaceSelectionStore.getState().selectConnection("conn-1", "Local Kafka");
+    useWorkspaceSelectionStore.getState().selectConnection("conn-2", "Staging Kafka");
+    expect(useWorkspaceSelectionStore.getState().selection).toEqual({
+      type: "connection",
+      id: "conn-2",
+      name: "Staging Kafka",
+    });
   });
 
   it("clears the selection", () => {
-    useWorkspaceSelectionStore.getState().selectConnection("conn-1");
+    useWorkspaceSelectionStore.getState().selectConnection("conn-1", "Local Kafka");
     useWorkspaceSelectionStore.getState().clearSelection();
     expect(useWorkspaceSelectionStore.getState().selection).toBeNull();
   });

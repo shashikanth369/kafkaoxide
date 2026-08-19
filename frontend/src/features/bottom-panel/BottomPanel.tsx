@@ -9,7 +9,7 @@ export function describeTabMemory(selection: WorkspaceSelection): string {
   if (!selection) return "Empty";
   switch (selection.type) {
     case "connection":
-      return "Cluster selected";
+      return `Cluster ${selection.name}`;
     case "broker":
       return `Broker ${selection.brokerId}`;
     case "topic":

@@ -6,7 +6,7 @@ import { create } from "zustand";
  * fields stay distinct.
  */
 export type WorkspaceSelection =
-  | { type: "connection"; id: string }
+  | { type: "connection"; id: string; name: string }
   | { type: "broker"; connectionId: string; brokerId: number }
   | { type: "topic"; connectionId: string; topicName: string }
   | { type: "consumerGroup"; connectionId: string; groupId: string }
@@ -20,7 +20,7 @@ interface WorkspaceSelectionState {
   byTab: Record<string, WorkspaceSelection>;
   /** Called whenever the active tab changes, so writes below land in the right tab's slot. */
   setActiveTab: (tabId: string | null) => void;
-  selectConnection: (id: string) => void;
+  selectConnection: (id: string, name: string) => void;
   selectBroker: (connectionId: string, brokerId: number) => void;
   selectTopic: (connectionId: string, topicName: string) => void;
   selectConsumerGroup: (connectionId: string, groupId: string) => void;
@@ -44,7 +44,7 @@ export const useWorkspaceSelectionStore = create<WorkspaceSelectionState>((set, 
     byTab: {},
     setActiveTab: (tabId) =>
       set((state) => ({ activeTabId: tabId, selection: (tabId ? state.byTab[tabId] : null) ?? null })),
-    selectConnection: (id) => write({ type: "connection", id }),
+    selectConnection: (id, name) => write({ type: "connection", id, name }),
     selectBroker: (connectionId, brokerId) => write({ type: "broker", connectionId, brokerId }),
     selectTopic: (connectionId, topicName) => write({ type: "topic", connectionId, topicName }),
     selectConsumerGroup: (connectionId, groupId) => write({ type: "consumerGroup", connectionId, groupId }),
