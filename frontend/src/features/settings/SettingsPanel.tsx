@@ -1,6 +1,6 @@
 import { KeyboardEvent as ReactKeyboardEvent, useEffect, useRef, useState } from "react";
 import { ThemeDropdown } from "../theme/ThemeDropdown";
-import { FONT_FAMILIES, MAX_FONT_SIZE_PX, MIN_FONT_SIZE_PX } from "./fonts";
+import { FONT_FAMILIES, FONT_SIZE_OPTIONS_PX } from "./fonts";
 import { activeFontFamilyId, usePreferencesStore } from "./usePreferencesStore";
 
 export function SettingsPanel() {
@@ -132,16 +132,14 @@ export function SettingsPanel() {
       </div>
 
       <label className="settings-field">
-        <span>Font size ({fontSizePx}px)</span>
-        <input
-          type="range"
-          aria-label="Font size"
-          min={MIN_FONT_SIZE_PX}
-          max={MAX_FONT_SIZE_PX}
-          step={1}
-          value={fontSizePx}
-          onChange={(e) => setFontSizePx(Number(e.target.value))}
-        />
+        <span>Font size</span>
+        <select aria-label="Font size" value={fontSizePx} onChange={(e) => setFontSizePx(Number(e.target.value))}>
+          {FONT_SIZE_OPTIONS_PX.map((px) => (
+            <option key={px} value={px}>
+              {px}px
+            </option>
+          ))}
+        </select>
       </label>
     </div>
   );

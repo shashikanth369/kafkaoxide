@@ -19,7 +19,7 @@ beforeEach(() => {
 });
 
 describe("SettingsPanel", () => {
-  it("renders the theme dropdown, font family dropdown, and font size slider", () => {
+  it("renders the theme dropdown, font family dropdown, and font size dropdown", () => {
     render(<SettingsPanel />);
     expect(screen.getByLabelText("Theme")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /System UI/ })).toBeInTheDocument();
@@ -62,9 +62,9 @@ describe("SettingsPanel", () => {
 
   it("commits a font size change immediately", () => {
     render(<SettingsPanel />);
-    const slider = screen.getByLabelText("Font size") as HTMLInputElement;
+    const select = screen.getByLabelText("Font size") as HTMLSelectElement;
 
-    fireEvent.change(slider, { target: { value: String(DEFAULT_FONT_SIZE_PX + 1) } });
+    fireEvent.change(select, { target: { value: String(DEFAULT_FONT_SIZE_PX + 1) } });
 
     expect(usePreferencesStore.getState().fontSizePx).toBe(DEFAULT_FONT_SIZE_PX + 1);
   });
