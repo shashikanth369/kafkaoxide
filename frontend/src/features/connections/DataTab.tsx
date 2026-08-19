@@ -56,17 +56,22 @@ export function DataTab({ connectionId, topicName, partitionId }: DataTabProps) 
   const messages = useTabDataStore((s) => s.messagesByTab[tabKey] ?? EMPTY_TAB_MESSAGES);
   const setTabMessages = useTabDataStore((s) => s.setTabMessages);
 
-  // DataTab is reused (not remounted) when switching between partitions of
-  // the same topic within the same top-level tab — see PartitionDetailPanel,
-  // which doesn't key it by partitionId so the active tab (Properties/Data/
-  // Replicas) survives the switch. The initial useState above only runs
-  // once on mount, so without this the Partition filter would keep showing
-  // whichever partition was selected first.
+  // DataTab is reused (not remounted) when switching between topics,
+  // partitions, or connections within the same top-level tab — neither
+  // App.tsx's <TopicDetailPanel>/<PartitionDetailPanel> nor this component
+  // are keyed by topic/partition, only by the top-level tab. Without this,
+  // a filter (or a leftover "Search messages" quick-filter) entered while
+  // looking at one topic would silently carry over and hide/skew results
+  // after switching to a completely different topic — e.g. leftover search
+  // text that doesn't match any of the new topic's rows makes a
+  // successful Fetch look like it returned nothing.
   useEffect(() => {
-    if (partitionId !== undefined) {
-      setForm((prev) => ({ ...prev, partitions: String(partitionId) }));
-    }
-  }, [partitionId]);
+    setForm(
+      partitionId === undefined ? emptyFilterForm() : { ...emptyFilterForm(), partitions: String(partitionId) },
+    );
+    setSearchText("");
+    setError(null);
+  }, [connectionId, topicName, partitionId]);
 
   function updateForm(patch: Partial<FilterFormState>) {
     setForm((prev) => ({ ...prev, ...patch }));

@@ -88,6 +88,27 @@ describe("DataTab", () => {
     expect(screen.getByLabelText("Partition filter")).toHaveValue("1");
   });
 
+  it("clears the search text and filter fields when switching to a different topic without remounting", async () => {
+    const user = userEvent.setup();
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+    const { rerender } = render(
+      <QueryClientProvider client={client}>
+        <DataTab connectionId="1" topicName="orders" />
+      </QueryClientProvider>,
+    );
+    await user.type(screen.getByLabelText("Search messages"), "some-old-order-id");
+    await user.type(screen.getByLabelText("Max messages per partition"), "5");
+
+    rerender(
+      <QueryClientProvider client={client}>
+        <DataTab connectionId="1" topicName="order-created" />
+      </QueryClientProvider>,
+    );
+
+    expect(screen.getByLabelText("Search messages")).toHaveValue("");
+    expect(screen.getByLabelText("Max messages per partition")).toHaveValue("");
+  });
+
   it("leaves the partition filter blank and editable when partitionId is not given", () => {
     renderWithClient(<DataTab connectionId="1" topicName="orders" />);
 
