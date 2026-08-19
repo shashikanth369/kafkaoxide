@@ -2,7 +2,9 @@ import { useRef, useState } from "react";
 import { AgGridReact } from "ag-grid-react";
 import { AllCommunityModule, ColDef, ModuleRegistry, themeQuartz, ValueFormatterParams } from "ag-grid-community";
 import { TopicMessage } from "../../lib/tauri";
+import { useTabsStore } from "../tabs/useTabsStore";
 import { useMessageViewerStore } from "../workspace/useMessageViewerStore";
+import { EMPTY_TAB_MESSAGES, tabDataKey, useTabDataStore } from "../workspace/useTabDataStore";
 import { emptyFilterForm, FilterFormState, toMessageFilter } from "./dataFilters";
 import { useFetchMessages } from "./useClusterResources";
 
@@ -39,13 +41,16 @@ export interface DataTabProps {
  */
 export function DataTab({ connectionId, topicName }: DataTabProps) {
   const [form, setForm] = useState<FilterFormState>(emptyFilterForm);
-  const [messages, setMessages] = useState<TopicMessage[]>([]);
   const [isPlaying, setIsPlaying] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchText, setSearchText] = useState("");
   const fetchMessages = useFetchMessages();
   const viewMessage = useMessageViewerStore((s) => s.viewMessage);
   const stoppedRef = useRef(false);
+  const activeTabId = useTabsStore((s) => s.activeTabId);
+  const tabKey = tabDataKey(activeTabId);
+  const messages = useTabDataStore((s) => s.messagesByTab[tabKey] ?? EMPTY_TAB_MESSAGES);
+  const setTabMessages = useTabDataStore((s) => s.setTabMessages);
 
   function updateForm(patch: Partial<FilterFormState>) {
     setForm((prev) => ({ ...prev, ...patch }));
@@ -62,7 +67,7 @@ export function DataTab({ connectionId, topicName }: DataTabProps) {
         filter: toMessageFilter(form),
       });
       if (!stoppedRef.current) {
-        setMessages(result);
+        setTabMessages(tabKey, result);
       }
     } catch (err) {
       if (!stoppedRef.current) {

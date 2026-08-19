@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { setInvokeHandlers } from "../../lib/testInvoke";
 import { useMessageViewerStore } from "../workspace/useMessageViewerStore";
+import { useTabDataStore } from "../workspace/useTabDataStore";
 import { DataTab } from "./DataTab";
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
@@ -32,10 +33,18 @@ function renderWithClient(ui: React.ReactElement) {
   return render(<QueryClientProvider client={client}>{ui}</QueryClientProvider>);
 }
 
+// Resetting via a helper (rather than a bare `lastGridProps = null` inline)
+// avoids TypeScript narrowing lastGridProps to exactly `null` for the rest
+// of the enclosing test body.
+function resetLastGridProps() {
+  lastGridProps = null;
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
-  lastGridProps = null;
+  resetLastGridProps();
   useMessageViewerStore.setState({ message: null });
+  useTabDataStore.setState({ messagesByTab: {} });
 });
 
 describe("DataTab", () => {
@@ -149,6 +158,22 @@ describe("DataTab", () => {
     await user.click(screen.getByRole("button", { name: "Play" }));
 
     await waitFor(() => expect(lastGridProps?.rowData).toEqual(messages));
+  });
+
+  it("keeps the fetched messages cached for the tab across an unmount/remount (switching tabs away and back)", async () => {
+    const messages = [{ partition: 0, offset: 1, timestampMs: null, key: null, payloadBase64: "eA==" }];
+    setInvokeHandlers({ connection_fetch_messages: () => messages });
+    const user = userEvent.setup();
+    const { unmount } = renderWithClient(<DataTab connectionId="1" topicName="orders" />);
+
+    await user.click(screen.getByRole("button", { name: "Play" }));
+    await waitFor(() => expect(lastGridProps?.rowData).toEqual(messages));
+
+    unmount();
+    resetLastGridProps();
+    renderWithClient(<DataTab connectionId="1" topicName="orders" />);
+
+    expect(lastGridProps?.rowData).toEqual(messages);
   });
 
   it("shows an error when fetching fails", async () => {

@@ -1,35 +1,38 @@
 import { LogsPanel } from "./LogsPanel";
 import { useLogsListener } from "./useLogsListener";
 import { useLogsStore } from "./useLogsStore";
-import { useWorkspaceSelectionStore, WorkspaceSelection } from "../workspace/useWorkspaceSelectionStore";
+import { useTabsStore } from "../tabs/useTabsStore";
+import { useWorkspaceSelectionStore } from "../workspace/useWorkspaceSelectionStore";
 import { useMessageViewerStore } from "../workspace/useMessageViewerStore";
+import { EMPTY_TAB_MESSAGES, tabDataKey, useTabDataStore } from "../workspace/useTabDataStore";
 
-/** A short label for what the active tab currently has cached — shown next to "Clear memory" in the status strip. */
-export function describeTabMemory(selection: WorkspaceSelection): string {
-  if (!selection) return "Empty";
-  switch (selection.type) {
-    case "connection":
-      return `Cluster ${selection.name}`;
-    case "broker":
-      return `Broker ${selection.brokerId}`;
-    case "topic":
-      return `Topic ${selection.topicName}`;
-    case "consumerGroup":
-      return `Consumer group ${selection.groupId}`;
-  }
+/** Formats a byte count (a JSON-serialized-size estimate, not an exact figure) as megabytes for display. */
+export function formatTabMemory(bytes: number): string {
+  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
 }
 
 export function BottomPanel() {
   useLogsListener();
   const isExpanded = useLogsStore((s) => s.isExpanded);
   const toggleExpanded = useLogsStore((s) => s.toggleExpanded);
-  const selection = useWorkspaceSelectionStore((s) => s.selection);
+  const activeTabId = useTabsStore((s) => s.activeTabId);
+  const tabKey = tabDataKey(activeTabId);
+
+  // "Tab memory" is everything the active top-level tab has cached — its
+  // fetched Data tab rows plus any payload loaded into the right pane's
+  // message viewer — not anything scoped to the left sidebar's tree.
+  const cachedMessages = useTabDataStore((s) => s.messagesByTab[tabKey] ?? EMPTY_TAB_MESSAGES);
+  const viewedMessage = useMessageViewerStore((s) => (activeTabId ? s.byTab[activeTabId] : undefined) ?? null);
+  const bytesUsed = JSON.stringify(cachedMessages).length + JSON.stringify(viewedMessage).length;
+
   const clearSelectionMemory = useWorkspaceSelectionStore((s) => s.clearTabMemory);
   const clearMessageMemory = useMessageViewerStore((s) => s.clearTabMemory);
+  const clearTabData = useTabDataStore((s) => s.clearTabMessages);
 
   function handleClearMemory() {
     clearSelectionMemory();
     clearMessageMemory();
+    clearTabData(tabKey);
   }
 
   return (
@@ -45,7 +48,7 @@ export function BottomPanel() {
           {isExpanded ? "▾" : "▸"} Logs
         </button>
         <div className="bottom-panel-memory">
-          <span className="bottom-panel-memory-label">Tab memory: {describeTabMemory(selection)}</span>
+          <span className="bottom-panel-memory-label">Tab memory: {formatTabMemory(bytesUsed)}</span>
           <button type="button" aria-label="Clear tab memory" onClick={handleClearMemory}>
             Clear memory
           </button>

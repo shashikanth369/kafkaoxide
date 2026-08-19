@@ -2,9 +2,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useLogsStore } from "./useLogsStore";
-import { BottomPanel } from "./BottomPanel";
+import { BottomPanel, formatTabMemory } from "./BottomPanel";
+import { useTabsStore } from "../tabs/useTabsStore";
 import { useWorkspaceSelectionStore } from "../workspace/useWorkspaceSelectionStore";
 import { useMessageViewerStore } from "../workspace/useMessageViewerStore";
+import { useTabDataStore } from "../workspace/useTabDataStore";
 
 let capturedHandler: ((event: { payload: unknown }) => void) | null = null;
 
@@ -18,8 +20,10 @@ vi.mock("@tauri-apps/api/event", () => ({
 beforeEach(() => {
   localStorage.clear();
   useLogsStore.setState({ entries: [], isExpanded: false });
+  useTabsStore.setState({ tabs: [], activeTabId: null, error: null });
   useWorkspaceSelectionStore.setState({ selection: null, activeTabId: null, byTab: {} });
   useMessageViewerStore.setState({ message: null, activeTabId: null, byTab: {} });
+  useTabDataStore.setState({ messagesByTab: {} });
   capturedHandler = null;
 });
 
@@ -66,29 +70,46 @@ describe("BottomPanel logs tool", () => {
   });
 });
 
+describe("formatTabMemory", () => {
+  it("formats a byte count as megabytes with two decimal places", () => {
+    expect(formatTabMemory(0)).toBe("0.00 MB");
+    expect(formatTabMemory(1024 * 1024)).toBe("1.00 MB");
+    expect(formatTabMemory(512 * 1024)).toBe("0.50 MB");
+  });
+});
+
 describe("BottomPanel tab memory", () => {
-  it("shows Empty when the active tab has no selection", () => {
+  it("shows 0.00 MB when the active tab has nothing cached", () => {
     render(<BottomPanel />);
-    expect(screen.getByText("Tab memory: Empty")).toBeInTheDocument();
+    expect(screen.getByText("Tab memory: 0.00 MB")).toBeInTheDocument();
   });
 
-  it("describes the active tab's current selection", () => {
-    useWorkspaceSelectionStore.setState({
-      selection: { type: "topic", connectionId: "1", topicName: "orders" },
+  it("reflects the active tab's cached Data tab rows as a byte-size estimate", () => {
+    const cached = [{ partition: 0, offset: 1, timestampMs: null, key: null, payloadBase64: null }];
+    useTabsStore.setState({ activeTabId: "tab-1" });
+    useTabDataStore.setState({ messagesByTab: { "tab-1": cached } });
+
+    render(<BottomPanel />);
+
+    const expectedBytes = JSON.stringify(cached).length + JSON.stringify(null).length;
+    expect(screen.getByText(`Tab memory: ${formatTabMemory(expectedBytes)}`)).toBeInTheDocument();
+  });
+
+  it("only reflects the active tab's own cached data, not another tab's", () => {
+    useTabsStore.setState({ activeTabId: "tab-1" });
+    useTabDataStore.setState({
+      messagesByTab: {
+        "tab-2": [{ partition: 0, offset: 1, timestampMs: null, key: null, payloadBase64: null }],
+      },
     });
+
     render(<BottomPanel />);
-    expect(screen.getByText("Tab memory: Topic orders")).toBeInTheDocument();
+
+    expect(screen.getByText("Tab memory: 0.00 MB")).toBeInTheDocument();
   });
 
-  it("shows the actual cluster name for a connection selection, not a generic label", () => {
-    useWorkspaceSelectionStore.setState({
-      selection: { type: "connection", id: "1", name: "Local Kafka" },
-    });
-    render(<BottomPanel />);
-    expect(screen.getByText("Tab memory: Cluster Local Kafka")).toBeInTheDocument();
-  });
-
-  it("clears both the selection and the message viewer for the active tab when Clear memory is clicked", async () => {
+  it("clears the selection, message viewer, and cached Data tab rows for the active tab when Clear memory is clicked", async () => {
+    useTabsStore.setState({ activeTabId: "tab-1" });
     useWorkspaceSelectionStore.setState({
       activeTabId: "tab-1",
       selection: { type: "topic", connectionId: "1", topicName: "orders" },
@@ -99,12 +120,16 @@ describe("BottomPanel tab memory", () => {
       message: { partition: 0, offset: 1, timestampMs: null, key: null, payloadBase64: null },
       byTab: { "tab-1": { partition: 0, offset: 1, timestampMs: null, key: null, payloadBase64: null } },
     });
+    useTabDataStore.setState({
+      messagesByTab: { "tab-1": [{ partition: 0, offset: 1, timestampMs: null, key: null, payloadBase64: null }] },
+    });
     const user = userEvent.setup();
     render(<BottomPanel />);
 
     await user.click(screen.getByLabelText("Clear tab memory"));
 
-    expect(screen.getByText("Tab memory: Empty")).toBeInTheDocument();
+    expect(screen.getByText("Tab memory: 0.00 MB")).toBeInTheDocument();
     expect(useMessageViewerStore.getState().message).toBeNull();
+    expect(useTabDataStore.getState().messagesByTab["tab-1"]).toBeUndefined();
   });
 });
