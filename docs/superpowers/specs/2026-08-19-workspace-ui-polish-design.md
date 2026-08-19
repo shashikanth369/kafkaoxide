@@ -23,6 +23,7 @@ In scope:
 3. Logs panel: collapsed-by-default with a persistent toggle.
 4. A permanently visible left/middle pane divider.
 5. Conditional rendering of the right pane based on message selection.
+6. New Connection modal: fixed size (stop resizing/repositioning on tab switch) and header-draggable.
 
 Out of scope (explicitly not requested): font preferences beyond family/size (no weight/line-height controls), a settings modal, changes to the middle/right divider's hover-only behavior, any backend/database changes, mobile/responsive layout changes.
 
@@ -78,6 +79,14 @@ A new `PreferencesProvider` component (mirroring the existing `ThemeProvider` pa
 
 **Change:** The third pane (and its divider) is only included in `ResizableShell`'s rendered panes when `useMessageViewerStore` has a selected message. When no message is selected, the middle pane expands to fill the freed space — this requires `ResizableShell` to support a variable number of panes (two vs. three) rather than always assuming three and hiding the third with CSS, so the width is actually reclaimed rather than left blank.
 
+## 7. New Connection modal — fixed size + draggable
+
+**Root cause of the current bug:** `.connection-modal` (`global.css:454-465`) has a fixed `width: 480px` but no explicit `height` — only a `max-height: calc(100vh - 64px)` cap. Its actual height is intrinsic, sized by whichever tab's content is currently mounted (`ConnectionTabsView.tsx` swaps exactly one tab panel in and out of the DOM at a time, and content height varies sharply: `PropertiesTab` has several sections, `SecurityTab` currently has just one dropdown). Because `.connection-modal-overlay` centers the modal via `align-items: center; justify-content: center` on a full-viewport fixed overlay (`global.css:444-452`), a height change on tab switch also shifts the modal's vertical position — that's the reported "size and position changes."
+
+**Fix:**
+- Give `.connection-modal` a fixed `height` (560px), still capped by the existing `max-height` for small viewports. `.connection-modal-body` already has `overflow-y: auto` (`global.css:494-498`), so a tab whose content exceeds the available space scrolls internally instead of growing the modal — satisfying "content inside the modal should resize, not the entire modal."
+- Add dragging via a new `useDraggableModal` hook, following the same delta-based pointer-tracking pattern already established by `useResizablePanes.ts` for pane-width dragging (no new dependency). It tracks an `{x, y}` offset from `(0, 0)`, applied via `transform: translate(x, y)` on `.connection-modal`. Dragging activates **only** via `onPointerDown` on `.connection-modal-header` (confirmed with user — header only, not the whole modal body), which gets `cursor: move`. The offset resets to `(0, 0)` (re-centered) each time the modal reopens — free, since `ConnectionModal` already unmounts/remounts on close/open (`{showModal && <ConnectionModal ... />}` in `App.tsx`), so hook state naturally resets.
+
 ## Testing
 
 Following this repo's established TDD discipline:
@@ -86,3 +95,4 @@ Following this repo's established TDD discipline:
 - `useLogsStore`'s new `isExpanded` toggle: unit test for default `false` and toggle behavior.
 - `ResizableShell`: test that it renders two panes (no divider/right pane) when the third pane is omitted, and three when present.
 - Component tests for the new `SettingsPanel` (theme checkmark rendering, hover-preview behavior, font size slider committing to the store) using React Testing Library, following the existing `userEvent` + jsdom patterns already used elsewhere in the test suite.
+- `useDraggableModal`: unit tests for offset math on synthetic PointerEvents (same style as `useResizablePanes.test.ts`), and that it resets to `(0, 0)` on each fresh mount.
