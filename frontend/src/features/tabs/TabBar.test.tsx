@@ -4,12 +4,14 @@ import userEvent from "@testing-library/user-event";
 import { invoke } from "@tauri-apps/api/core";
 import { setInvokeHandlers } from "../../lib/testInvoke";
 import { useTabsStore } from "./useTabsStore";
+import { useSettingsPanelStore } from "../settings/useSettingsPanelStore";
 import { TabBar } from "./TabBar";
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
 
 beforeEach(() => {
   useTabsStore.setState({ tabs: [], activeTabId: null, error: null });
+  useSettingsPanelStore.setState({ isOpen: false });
 });
 
 describe("TabBar", () => {
@@ -170,5 +172,22 @@ describe("TabBar", () => {
 
     expect(await screen.findByRole("alert")).toHaveTextContent("create failed");
     expect(useTabsStore.getState().tabs).toHaveLength(1);
+  });
+
+  it("shows a closable Settings pill when the settings panel is open", async () => {
+    useSettingsPanelStore.setState({ isOpen: true });
+    const user = userEvent.setup();
+    render(<TabBar />);
+
+    expect(screen.getByRole("tab", { name: "Settings" })).toHaveAttribute("aria-selected", "true");
+
+    await user.click(screen.getByLabelText("Close tab Settings"));
+
+    expect(useSettingsPanelStore.getState().isOpen).toBe(false);
+  });
+
+  it("does not show the Settings pill when the settings panel is closed", () => {
+    render(<TabBar />);
+    expect(screen.queryByRole("tab", { name: "Settings" })).not.toBeInTheDocument();
   });
 });

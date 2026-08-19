@@ -1,7 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { ThemeProvider } from "./features/theme/ThemeProvider";
-import { ThemeDropdown } from "./features/theme/ThemeDropdown";
 import { TabBar } from "./features/tabs/TabBar";
 import { useTabsStore } from "./features/tabs/useTabsStore";
 import { ConnectionTree } from "./features/connections/ConnectionTree";
@@ -15,6 +14,9 @@ import { useCreateConnection } from "./features/connections/useConnections";
 import { BottomPanel } from "./features/bottom-panel/BottomPanel";
 import { ResizableShell } from "./features/layout/ResizableShell";
 import { useWorkspaceSelectionStore } from "./features/workspace/useWorkspaceSelectionStore";
+import { PreferencesProvider } from "./features/settings/PreferencesProvider";
+import { SettingsPanel } from "./features/settings/SettingsPanel";
+import { useSettingsPanelStore } from "./features/settings/useSettingsPanelStore";
 import "./styles/themes.css";
 import "./styles/global.css";
 
@@ -25,6 +27,8 @@ function AppShell() {
   const createConnection = useCreateConnection();
   const loadTabs = useTabsStore((s) => s.loadTabs);
   const selection = useWorkspaceSelectionStore((s) => s.selection);
+  const settingsOpen = useSettingsPanelStore((s) => s.isOpen);
+  const openSettings = useSettingsPanelStore((s) => s.open);
 
   useEffect(() => {
     loadTabs();
@@ -34,7 +38,9 @@ function AppShell() {
     <div className="app-shell">
       <header className="app-header">
         <TabBar />
-        <ThemeDropdown />
+        <button type="button" aria-label="Open settings" className="settings-gear" onClick={openSettings}>
+          ⚙
+        </button>
       </header>
       <div className="app-body">
         <ResizableShell
@@ -56,19 +62,23 @@ function AppShell() {
             </aside>
           }
           middle={
-            <main className="app-main">
-              {selection?.type === "connection" && <ClusterDetailPanel connectionId={selection.id} />}
-              {selection?.type === "broker" && (
-                <BrokerDetailPanel connectionId={selection.connectionId} brokerId={selection.brokerId} />
-              )}
-              {selection?.type === "topic" && (
-                <TopicDetailPanel connectionId={selection.connectionId} topicName={selection.topicName} />
-              )}
-              {selection?.type === "consumerGroup" && (
-                <ConsumerGroupDetailPanel connectionId={selection.connectionId} groupId={selection.groupId} />
-              )}
-              {!selection && <p className="app-main-placeholder">Select a cluster, broker, or topic.</p>}
-            </main>
+            settingsOpen ? (
+              <SettingsPanel />
+            ) : (
+              <main className="app-main">
+                {selection?.type === "connection" && <ClusterDetailPanel connectionId={selection.id} />}
+                {selection?.type === "broker" && (
+                  <BrokerDetailPanel connectionId={selection.connectionId} brokerId={selection.brokerId} />
+                )}
+                {selection?.type === "topic" && (
+                  <TopicDetailPanel connectionId={selection.connectionId} topicName={selection.topicName} />
+                )}
+                {selection?.type === "consumerGroup" && (
+                  <ConsumerGroupDetailPanel connectionId={selection.connectionId} groupId={selection.groupId} />
+                )}
+                {!selection && <p className="app-main-placeholder">Select a cluster, broker, or topic.</p>}
+              </main>
+            )
           }
           right={<MessagePayloadViewer />}
         />
@@ -82,7 +92,9 @@ export function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
-        <AppShell />
+        <PreferencesProvider>
+          <AppShell />
+        </PreferencesProvider>
       </ThemeProvider>
     </QueryClientProvider>
   );

@@ -1,5 +1,6 @@
 import { KeyboardEvent, useState } from "react";
 import { useTabsStore } from "./useTabsStore";
+import { useSettingsPanelStore } from "../settings/useSettingsPanelStore";
 
 export function TabBar() {
   const tabs = useTabsStore((s) => s.tabs);
@@ -9,6 +10,8 @@ export function TabBar() {
   const renameTab = useTabsStore((s) => s.renameTab);
   const addTab = useTabsStore((s) => s.addTab);
   const deleteTab = useTabsStore((s) => s.deleteTab);
+  const settingsOpen = useSettingsPanelStore((s) => s.isOpen);
+  const closeSettings = useSettingsPanelStore((s) => s.close);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draftName, setDraftName] = useState("");
 
@@ -79,6 +82,22 @@ export function TabBar() {
             )}
           </div>
         ))}
+        {settingsOpen && (
+          <div role="tab" aria-label="Settings" aria-selected="true" tabIndex={0} className="tab">
+            <span>Settings</span>
+            <button
+              type="button"
+              className="tab-close"
+              aria-label="Close tab Settings"
+              onClick={(e) => {
+                e.stopPropagation();
+                closeSettings();
+              }}
+            >
+              ×
+            </button>
+          </div>
+        )}
         <button type="button" aria-label="New tab" onClick={() => addTab("New Tab")}>
           +
         </button>
