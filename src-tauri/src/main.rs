@@ -58,6 +58,7 @@ fn main() {
             commands::tabs::tab_rename,
             commands::tabs::tab_delete,
             commands::tabs::tab_reorder,
+            commands::viewer::open_json_viewer,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

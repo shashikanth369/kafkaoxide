@@ -1,7 +1,14 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { invoke } from "@tauri-apps/api/core";
 import { JsonTreeView } from "./JsonTreeView";
+
+vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
+
+beforeEach(() => {
+  vi.clearAllMocks();
+});
 
 describe("JsonTreeView", () => {
   it("renders primitive values with their keys", () => {
@@ -67,5 +74,14 @@ describe("JsonTreeView", () => {
     await user.click(screen.getByRole("button", { name: "Copy" }));
 
     expect(await screen.findByRole("button", { name: "Copied!" })).toBeInTheDocument();
+  });
+
+  it("opens the value in a standalone viewer tab when 'Open in new tab' is clicked", async () => {
+    const user = userEvent.setup();
+    render(<JsonTreeView value={{ a: 1 }} />);
+
+    await user.click(screen.getByRole("button", { name: "Open in new tab" }));
+
+    expect(invoke).toHaveBeenCalledWith("open_json_viewer", { json: JSON.stringify({ a: 1 }, null, 2) });
   });
 });

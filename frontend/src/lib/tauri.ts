@@ -193,4 +193,6 @@ export const api = {
   renameTab: (id: string, name: string) => invoke<void>("tab_rename", { id, name }),
   deleteTab: (id: string) => invoke<void>("tab_delete", { id }),
   reorderTabs: (ids: string[]) => invoke<void>("tab_reorder", { ids }),
+  /** Opens a standalone JSON-tree-viewer page (no app chrome) in the system browser, backed by a generated temp HTML file. */
+  openJsonViewer: (json: string) => invoke<void>("open_json_viewer", { json }),
 };
