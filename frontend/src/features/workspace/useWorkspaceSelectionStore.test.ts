@@ -53,6 +53,16 @@ describe("useWorkspaceSelectionStore", () => {
     });
   });
 
+  it("selects a partition", () => {
+    useWorkspaceSelectionStore.getState().selectPartition("conn-1", "orders", 2);
+    expect(useWorkspaceSelectionStore.getState().selection).toEqual({
+      type: "partition",
+      connectionId: "conn-1",
+      topicName: "orders",
+      partitionId: 2,
+    });
+  });
+
   it("selects a consumer group", () => {
     useWorkspaceSelectionStore.getState().selectConsumerGroup("conn-1", "billing");
     expect(useWorkspaceSelectionStore.getState().selection).toEqual({

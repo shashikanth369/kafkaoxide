@@ -1,5 +1,6 @@
 import { MouseEvent as ReactMouseEvent, useRef, useState } from "react";
 import { TopicSummary } from "../../lib/tauri";
+import { useWorkspaceSelectionStore } from "../workspace/useWorkspaceSelectionStore";
 import { usePartitions } from "./useClusterResources";
 
 export interface TopicCategoryProps {
@@ -80,10 +81,21 @@ interface TopicRowProps {
 function TopicRow({ connectionId, topic, isSelected, onSelect }: TopicRowProps) {
   const [expanded, setExpanded] = useState(false);
   const partitions = usePartitions(connectionId, topic.name, expanded);
+  const selection = useWorkspaceSelectionStore((s) => s.selection);
+  const selectPartition = useWorkspaceSelectionStore((s) => s.selectPartition);
 
   function toggleExpand(e: ReactMouseEvent) {
     e.stopPropagation();
     setExpanded((current) => !current);
+  }
+
+  function isPartitionSelected(partitionId: number) {
+    return (
+      selection?.type === "partition" &&
+      selection.connectionId === connectionId &&
+      selection.topicName === topic.name &&
+      selection.partitionId === partitionId
+    );
   }
 
   return (
@@ -101,12 +113,17 @@ function TopicRow({ connectionId, topic, isSelected, onSelect }: TopicRowProps) 
       </div>
       {expanded && (
         <ul className="topic-partition-list" data-testid={`partitions-${topic.name}`}>
-          {partitions.isLoading && <li className="topic-partition-item">Loading partitions…</li>}
+          {partitions.isLoading && <li className="topic-partition-empty">Loading partitions…</li>}
           {!partitions.isLoading && (partitions.data?.length ?? 0) === 0 && (
-            <li className="topic-partition-item">No partitions found.</li>
+            <li className="topic-partition-empty">No partitions found.</li>
           )}
           {partitions.data?.map((partition) => (
-            <li key={partition.id} className="topic-partition-item">
+            <li
+              key={partition.id}
+              data-testid={`resource-item-partition-${topic.name}-${partition.id}`}
+              className={`topic-partition-item${isPartitionSelected(partition.id) ? " topic-partition-item--selected" : ""}`}
+              onClick={() => selectPartition(connectionId, topic.name, partition.id)}
+            >
               Partition {partition.id}
             </li>
           ))}

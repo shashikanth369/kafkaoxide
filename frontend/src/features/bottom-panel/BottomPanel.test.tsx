@@ -6,7 +6,7 @@ import { BottomPanel, formatTabMemory } from "./BottomPanel";
 import { useTabsStore } from "../tabs/useTabsStore";
 import { useWorkspaceSelectionStore } from "../workspace/useWorkspaceSelectionStore";
 import { useMessageViewerStore } from "../workspace/useMessageViewerStore";
-import { useTabDataStore } from "../workspace/useTabDataStore";
+import { dataTabCacheKey, useTabDataStore } from "../workspace/useTabDataStore";
 
 let capturedHandler: ((event: { payload: unknown }) => void) | null = null;
 
@@ -120,8 +120,9 @@ describe("BottomPanel tab memory", () => {
       message: { partition: 0, offset: 1, timestampMs: null, key: null, payloadBase64: null },
       byTab: { "tab-1": { partition: 0, offset: 1, timestampMs: null, key: null, payloadBase64: null } },
     });
+    const dataKey = dataTabCacheKey("tab-1", "1", "orders");
     useTabDataStore.setState({
-      messagesByTab: { "tab-1": [{ partition: 0, offset: 1, timestampMs: null, key: null, payloadBase64: null }] },
+      messagesByTab: { [dataKey]: [{ partition: 0, offset: 1, timestampMs: null, key: null, payloadBase64: null }] },
     });
     const user = userEvent.setup();
     render(<BottomPanel />);
@@ -130,6 +131,43 @@ describe("BottomPanel tab memory", () => {
 
     expect(screen.getByText("Tab memory: 0.00 MB")).toBeInTheDocument();
     expect(useMessageViewerStore.getState().message).toBeNull();
-    expect(useTabDataStore.getState().messagesByTab["tab-1"]).toBeUndefined();
+    expect(useTabDataStore.getState().messagesByTab[dataKey]).toBeUndefined();
+  });
+
+  it("reflects a topic-scoped cache entry when a topic is selected", () => {
+    useTabsStore.setState({ activeTabId: "tab-1" });
+    useWorkspaceSelectionStore.setState({
+      selection: { type: "topic", connectionId: "1", topicName: "orders" },
+    });
+    const cached = [{ partition: 0, offset: 1, timestampMs: null, key: null, payloadBase64: null }];
+    useTabDataStore.setState({ messagesByTab: { [dataTabCacheKey("tab-1", "1", "orders")]: cached } });
+
+    render(<BottomPanel />);
+
+    const expectedBytes = JSON.stringify(cached).length + JSON.stringify(null).length;
+    expect(screen.getByText(`Tab memory: ${formatTabMemory(expectedBytes)}`)).toBeInTheDocument();
+  });
+
+  it("reflects a partition-scoped cache entry when a partition is selected, separately from the topic's own", () => {
+    useTabsStore.setState({ activeTabId: "tab-1" });
+    useWorkspaceSelectionStore.setState({
+      selection: { type: "partition", connectionId: "1", topicName: "orders", partitionId: 0 },
+    });
+    const topicCached = [{ partition: 0, offset: 1, timestampMs: null, key: null, payloadBase64: null }];
+    const partitionCached = [
+      { partition: 0, offset: 1, timestampMs: null, key: null, payloadBase64: null },
+      { partition: 0, offset: 2, timestampMs: null, key: null, payloadBase64: null },
+    ];
+    useTabDataStore.setState({
+      messagesByTab: {
+        [dataTabCacheKey("tab-1", "1", "orders")]: topicCached,
+        [dataTabCacheKey("tab-1", "1", "orders", 0)]: partitionCached,
+      },
+    });
+
+    render(<BottomPanel />);
+
+    const expectedBytes = JSON.stringify(partitionCached).length + JSON.stringify(null).length;
+    expect(screen.getByText(`Tab memory: ${formatTabMemory(expectedBytes)}`)).toBeInTheDocument();
   });
 });

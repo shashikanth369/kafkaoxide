@@ -4,7 +4,7 @@ import { AllCommunityModule, ColDef, ModuleRegistry, themeQuartz, ValueFormatter
 import { TopicMessage } from "../../lib/tauri";
 import { useTabsStore } from "../tabs/useTabsStore";
 import { useMessageViewerStore } from "../workspace/useMessageViewerStore";
-import { EMPTY_TAB_MESSAGES, tabDataKey, useTabDataStore } from "../workspace/useTabDataStore";
+import { dataTabCacheKey, EMPTY_TAB_MESSAGES, useTabDataStore } from "../workspace/useTabDataStore";
 import { emptyFilterForm, FilterFormState, toMessageFilter } from "./dataFilters";
 import { useFetchMessages } from "./useClusterResources";
 
@@ -30,6 +30,8 @@ const DEFAULT_COL_DEF: ColDef<TopicMessage> = {
 export interface DataTabProps {
   connectionId: string;
   topicName: string;
+  /** When set, this Data tab is scoped to a single partition — the Partition filter is prepopulated and locked to it. */
+  partitionId?: number;
 }
 
 /**
@@ -39,8 +41,10 @@ export interface DataTabProps {
  * discards the result when it eventually arrives, so the grid never
  * updates with data the user already asked to stop waiting for.
  */
-export function DataTab({ connectionId, topicName }: DataTabProps) {
-  const [form, setForm] = useState<FilterFormState>(emptyFilterForm);
+export function DataTab({ connectionId, topicName, partitionId }: DataTabProps) {
+  const [form, setForm] = useState<FilterFormState>(() =>
+    partitionId === undefined ? emptyFilterForm() : { ...emptyFilterForm(), partitions: String(partitionId) },
+  );
   const [isPlaying, setIsPlaying] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchText, setSearchText] = useState("");
@@ -48,7 +52,7 @@ export function DataTab({ connectionId, topicName }: DataTabProps) {
   const viewMessage = useMessageViewerStore((s) => s.viewMessage);
   const stoppedRef = useRef(false);
   const activeTabId = useTabsStore((s) => s.activeTabId);
-  const tabKey = tabDataKey(activeTabId);
+  const tabKey = dataTabCacheKey(activeTabId, connectionId, topicName, partitionId);
   const messages = useTabDataStore((s) => s.messagesByTab[tabKey] ?? EMPTY_TAB_MESSAGES);
   const setTabMessages = useTabDataStore((s) => s.setTabMessages);
 
@@ -108,6 +112,7 @@ export function DataTab({ connectionId, topicName }: DataTabProps) {
             value={form.partitions}
             onChange={(e) => updateForm({ partitions: e.target.value })}
             placeholder="e.g. 0, 1, 2"
+            disabled={partitionId !== undefined}
           />
         </label>
         <label>

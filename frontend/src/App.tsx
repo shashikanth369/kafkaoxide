@@ -8,6 +8,7 @@ import { ConnectionModal } from "./features/connections/modal/ConnectionModal";
 import { ClusterDetailPanel } from "./features/connections/ClusterDetailPanel";
 import { BrokerDetailPanel } from "./features/connections/BrokerDetailPanel";
 import { TopicDetailPanel } from "./features/connections/TopicDetailPanel";
+import { PartitionDetailPanel } from "./features/connections/PartitionDetailPanel";
 import { MessagePayloadViewer } from "./features/connections/MessagePayloadViewer";
 import { ConsumerGroupDetailPanel } from "./features/connections/ConsumerGroupDetailPanel";
 import { useCreateConnection } from "./features/connections/useConnections";
@@ -85,6 +86,13 @@ function AppShell() {
                 )}
                 {selection?.type === "topic" && (
                   <TopicDetailPanel connectionId={selection.connectionId} topicName={selection.topicName} />
+                )}
+                {selection?.type === "partition" && (
+                  <PartitionDetailPanel
+                    connectionId={selection.connectionId}
+                    topicName={selection.topicName}
+                    partitionId={selection.partitionId}
+                  />
                 )}
                 {selection?.type === "consumerGroup" && (
                   <ConsumerGroupDetailPanel connectionId={selection.connectionId} groupId={selection.groupId} />

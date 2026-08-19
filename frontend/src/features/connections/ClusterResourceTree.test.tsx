@@ -133,6 +133,51 @@ describe("ClusterResourceTree", () => {
     expect(screen.getByText("Partition 1")).toBeInTheDocument();
   });
 
+  it("selects a partition into the workspace store when clicked", async () => {
+    setInvokeHandlers({
+      connection_list_topics: () => [{ name: "orders", partitionCount: 3 }],
+      connection_list_partitions: () => [
+        { id: 0, leader: 1, replicas: [1], isr: [1], lowOffset: 0, highOffset: 10 },
+      ],
+    });
+    const user = userEvent.setup();
+    renderWithClient(<ClusterResourceTree connectionId="1" />);
+    await user.click(screen.getByTestId("category-Topics"));
+    await screen.findByText("orders");
+    await user.click(screen.getByLabelText("Expand orders"));
+    await screen.findByText("Partition 0");
+
+    await user.click(screen.getByText("Partition 0"));
+
+    expect(useWorkspaceSelectionStore.getState().selection).toEqual({
+      type: "partition",
+      connectionId: "1",
+      topicName: "orders",
+      partitionId: 0,
+    });
+  });
+
+  it("marks the selected partition row visually", async () => {
+    setInvokeHandlers({
+      connection_list_topics: () => [{ name: "orders", partitionCount: 3 }],
+      connection_list_partitions: () => [
+        { id: 0, leader: 1, replicas: [1], isr: [1], lowOffset: 0, highOffset: 10 },
+      ],
+    });
+    const user = userEvent.setup();
+    renderWithClient(<ClusterResourceTree connectionId="1" />);
+    await user.click(screen.getByTestId("category-Topics"));
+    await screen.findByText("orders");
+    await user.click(screen.getByLabelText("Expand orders"));
+    await screen.findByText("Partition 0");
+
+    await user.click(screen.getByText("Partition 0"));
+
+    expect(screen.getByTestId("resource-item-partition-orders-0").className).toContain(
+      "topic-partition-item--selected",
+    );
+  });
+
   it("does not select the topic as a side effect of expanding it", async () => {
     setInvokeHandlers({
       connection_list_topics: () => [{ name: "orders", partitionCount: 3 }],

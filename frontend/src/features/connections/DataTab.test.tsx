@@ -61,6 +61,35 @@ describe("DataTab", () => {
     expect(screen.getByLabelText("Offset")).toBeInTheDocument();
   });
 
+  it("pre-fills and disables the partition filter when partitionId is given", () => {
+    renderWithClient(<DataTab connectionId="1" topicName="orders" partitionId={2} />);
+
+    expect(screen.getByLabelText("Partition filter")).toHaveValue("2");
+    expect(screen.getByLabelText("Partition filter")).toBeDisabled();
+  });
+
+  it("leaves the partition filter blank and editable when partitionId is not given", () => {
+    renderWithClient(<DataTab connectionId="1" topicName="orders" />);
+
+    expect(screen.getByLabelText("Partition filter")).toHaveValue("");
+    expect(screen.getByLabelText("Partition filter")).toBeEnabled();
+  });
+
+  it("fetches with the prepopulated partition when partitionId is given and Fetch is clicked", async () => {
+    const fetchMessages = vi.fn(() => []);
+    setInvokeHandlers({ connection_fetch_messages: fetchMessages });
+    const user = userEvent.setup();
+    renderWithClient(<DataTab connectionId="1" topicName="orders" partitionId={2} />);
+
+    await user.click(screen.getByRole("button", { name: "Fetch" }));
+
+    await waitFor(() =>
+      expect(fetchMessages).toHaveBeenCalledWith(
+        expect.objectContaining({ filter: expect.objectContaining({ partitions: [2] }) }),
+      ),
+    );
+  });
+
   it("starts with Stop disabled, since nothing is playing yet", () => {
     renderWithClient(<DataTab connectionId="1" topicName="orders" />);
     expect(screen.getByRole("button", { name: "Stop" })).toBeDisabled();
@@ -174,6 +203,38 @@ describe("DataTab", () => {
     renderWithClient(<DataTab connectionId="1" topicName="orders" />);
 
     expect(lastGridProps?.rowData).toEqual(messages);
+  });
+
+  it("does not leak one topic's cached rows into a different topic's Data tab in the same top-level tab", async () => {
+    const messages = [{ partition: 0, offset: 1, timestampMs: null, key: null, payloadBase64: "eA==" }];
+    setInvokeHandlers({ connection_fetch_messages: () => messages });
+    const user = userEvent.setup();
+    const { unmount } = renderWithClient(<DataTab connectionId="1" topicName="orders" />);
+
+    await user.click(screen.getByRole("button", { name: "Fetch" }));
+    await waitFor(() => expect(lastGridProps?.rowData).toEqual(messages));
+
+    unmount();
+    resetLastGridProps();
+    renderWithClient(<DataTab connectionId="1" topicName="payments" />);
+
+    expect(lastGridProps?.rowData).toEqual([]);
+  });
+
+  it("does not leak a topic's cached rows into one of its partitions' Data tab", async () => {
+    const messages = [{ partition: 0, offset: 1, timestampMs: null, key: null, payloadBase64: "eA==" }];
+    setInvokeHandlers({ connection_fetch_messages: () => messages });
+    const user = userEvent.setup();
+    const { unmount } = renderWithClient(<DataTab connectionId="1" topicName="orders" />);
+
+    await user.click(screen.getByRole("button", { name: "Fetch" }));
+    await waitFor(() => expect(lastGridProps?.rowData).toEqual(messages));
+
+    unmount();
+    resetLastGridProps();
+    renderWithClient(<DataTab connectionId="1" topicName="orders" partitionId={0} />);
+
+    expect(lastGridProps?.rowData).toEqual([]);
   });
 
   it("shows an error when fetching fails", async () => {

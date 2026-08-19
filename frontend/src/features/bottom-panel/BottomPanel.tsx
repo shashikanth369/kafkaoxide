@@ -4,7 +4,7 @@ import { useLogsStore } from "./useLogsStore";
 import { useTabsStore } from "../tabs/useTabsStore";
 import { useWorkspaceSelectionStore } from "../workspace/useWorkspaceSelectionStore";
 import { useMessageViewerStore } from "../workspace/useMessageViewerStore";
-import { EMPTY_TAB_MESSAGES, tabDataKey, useTabDataStore } from "../workspace/useTabDataStore";
+import { dataTabCacheKey, EMPTY_TAB_MESSAGES, tabDataKey, useTabDataStore } from "../workspace/useTabDataStore";
 
 /** Formats a byte count (a JSON-serialized-size estimate, not an exact figure) as megabytes for display. */
 export function formatTabMemory(bytes: number): string {
@@ -16,7 +16,13 @@ export function BottomPanel() {
   const isExpanded = useLogsStore((s) => s.isExpanded);
   const toggleExpanded = useLogsStore((s) => s.toggleExpanded);
   const activeTabId = useTabsStore((s) => s.activeTabId);
-  const tabKey = tabDataKey(activeTabId);
+  const selection = useWorkspaceSelectionStore((s) => s.selection);
+  const tabKey =
+    selection?.type === "topic"
+      ? dataTabCacheKey(activeTabId, selection.connectionId, selection.topicName)
+      : selection?.type === "partition"
+        ? dataTabCacheKey(activeTabId, selection.connectionId, selection.topicName, selection.partitionId)
+        : tabDataKey(activeTabId);
 
   // "Tab memory" is everything the active top-level tab has cached — its
   // fetched Data tab rows plus any payload loaded into the right pane's

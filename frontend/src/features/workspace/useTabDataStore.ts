@@ -16,6 +16,23 @@ export function tabDataKey(activeTabId: string | null): string {
   return activeTabId ?? UNASSIGNED_TAB_KEY;
 }
 
+/**
+ * A Data tab's cache key, scoped by top-level tab AND by what it's showing
+ * (connection/topic, and partition when viewing a single partition's Data
+ * tab) — without the topic/partition component, switching from one topic
+ * (or a topic's Data tab to one of its partitions') to another within the
+ * same top-level tab would show the previous topic/partition's stale
+ * cached rows until Fetch was clicked again.
+ */
+export function dataTabCacheKey(
+  activeTabId: string | null,
+  connectionId: string,
+  topicName: string,
+  partitionId?: number,
+): string {
+  return `${tabDataKey(activeTabId)}:${connectionId}:${topicName}:${partitionId ?? "all"}`;
+}
+
 interface TabDataState {
   /**
    * Per-tab cache of the Data tab's last-fetched message rows. Without

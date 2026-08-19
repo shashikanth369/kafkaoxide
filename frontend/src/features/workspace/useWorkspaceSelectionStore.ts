@@ -9,6 +9,7 @@ export type WorkspaceSelection =
   | { type: "connection"; id: string; name: string }
   | { type: "broker"; connectionId: string; brokerId: number }
   | { type: "topic"; connectionId: string; topicName: string }
+  | { type: "partition"; connectionId: string; topicName: string; partitionId: number }
   | { type: "consumerGroup"; connectionId: string; groupId: string }
   | null;
 
@@ -23,6 +24,7 @@ interface WorkspaceSelectionState {
   selectConnection: (id: string, name: string) => void;
   selectBroker: (connectionId: string, brokerId: number) => void;
   selectTopic: (connectionId: string, topicName: string) => void;
+  selectPartition: (connectionId: string, topicName: string, partitionId: number) => void;
   selectConsumerGroup: (connectionId: string, groupId: string) => void;
   clearSelection: () => void;
   /** Resets a tab's cached selection back to blank — the Bottom panel's "Clear memory" button. Defaults to the active tab. */
@@ -47,6 +49,8 @@ export const useWorkspaceSelectionStore = create<WorkspaceSelectionState>((set, 
     selectConnection: (id, name) => write({ type: "connection", id, name }),
     selectBroker: (connectionId, brokerId) => write({ type: "broker", connectionId, brokerId }),
     selectTopic: (connectionId, topicName) => write({ type: "topic", connectionId, topicName }),
+    selectPartition: (connectionId, topicName, partitionId) =>
+      write({ type: "partition", connectionId, topicName, partitionId }),
     selectConsumerGroup: (connectionId, groupId) => write({ type: "consumerGroup", connectionId, groupId }),
     clearSelection: () => write(null),
     clearTabMemory: (tabId) => {
