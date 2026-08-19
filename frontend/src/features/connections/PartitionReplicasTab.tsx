@@ -42,7 +42,7 @@ export function PartitionReplicasTab({ connectionId, topicName, partitionId }: P
   const rows: ReplicaRow[] = partition.replicas.map((node, index) => ({ id: index, node }));
 
   return (
-    <div role="tabpanel" aria-label="Replicas" className="connection-modal-tab-panel">
+    <div role="tabpanel" aria-label="Replicas" className="connection-modal-tab-panel connection-modal-tab-panel--fill">
       <div className="data-tab-grid" data-testid="replicas-grid">
         <AgGridReact<ReplicaRow>
           theme={APP_GRID_THEME}

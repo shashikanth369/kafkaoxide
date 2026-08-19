@@ -17,21 +17,27 @@ interface MockColDef {
   field?: string;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   valueGetter?: (params: any) => string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  cellRenderer?: any;
 }
 let lastGridProps: {
   rowData: unknown[];
-  onRowClicked: (event: { data: unknown }) => void;
+  onRowClicked: (event: { data: unknown; event?: { target: unknown } }) => void;
   quickFilterText?: string;
   overlayNoRowsTemplate?: string;
   columnDefs: MockColDef[];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  context?: any;
 } | null = null;
 vi.mock("ag-grid-react", () => ({
   AgGridReact: (props: {
     rowData: unknown[];
-    onRowClicked: (event: { data: unknown }) => void;
+    onRowClicked: (event: { data: unknown; event?: { target: unknown } }) => void;
     quickFilterText?: string;
     overlayNoRowsTemplate?: string;
     columnDefs: MockColDef[];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    context?: any;
   }) => {
     lastGridProps = props;
     return null;
@@ -341,5 +347,52 @@ describe("DataTab", () => {
     lastGridProps?.onRowClicked({ data: message });
 
     expect(useMessageViewerStore.getState().message).toEqual(message);
+  });
+
+  it("does not open the viewer when the row click originated from a button (e.g. Fetch payload)", () => {
+    renderWithClient(<DataTab connectionId="1" topicName="orders" />);
+    const message = { partition: 0, offset: 5, timestampMs: null, key: null, payloadBase64: null };
+    const button = document.createElement("button");
+
+    lastGridProps?.onRowClicked({ data: message, event: { target: button } });
+
+    expect(useMessageViewerStore.getState().message).toBeNull();
+  });
+
+  it("passes a context.fetchPayload that fetches just one row's payload and patches it into the cached rows", async () => {
+    const initial = [
+      { partition: 0, offset: 1, timestampMs: null, key: null, payloadBase64: null },
+      { partition: 1, offset: 2, timestampMs: null, key: null, payloadBase64: null },
+    ];
+    setInvokeHandlers({ connection_fetch_messages: () => initial });
+    const user = userEvent.setup();
+    renderWithClient(<DataTab connectionId="1" topicName="orders" />);
+
+    await user.click(screen.getByRole("button", { name: "Fetch" }));
+    await waitFor(() => expect(lastGridProps?.rowData).toEqual(initial));
+
+    const fetchMessages = vi.fn(() => [
+      { partition: 0, offset: 1, timestampMs: null, key: "k", payloadBase64: "eA==" },
+    ]);
+    setInvokeHandlers({ connection_fetch_messages: fetchMessages });
+    await lastGridProps?.context.fetchPayload(initial[0]);
+
+    expect(fetchMessages).toHaveBeenCalledWith({
+      id: "1",
+      topic: "orders",
+      filter: {
+        partitions: [0],
+        maxMessagesPerPartition: 1,
+        maxTotalMessages: 1,
+        fromTimestampMs: null,
+        toTimestampMs: null,
+        offset: 1,
+        includePayload: true,
+      },
+    });
+    expect(lastGridProps?.rowData).toEqual([
+      { partition: 0, offset: 1, timestampMs: null, key: "k", payloadBase64: "eA==" },
+      initial[1],
+    ]);
   });
 });

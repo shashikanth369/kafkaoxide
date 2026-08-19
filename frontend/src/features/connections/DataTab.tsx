@@ -9,6 +9,7 @@ import { APP_GRID_THEME } from "./agGridTheme";
 import { emptyFilterForm, FilterFormState, toMessageFilter } from "./dataFilters";
 import { base64ToBytes, bytesToText, detectConfluentAvro } from "./payloadDecoding";
 import { useFetchMessages } from "./useClusterResources";
+import { ValueCell, ValueCellContext } from "./ValueCell";
 
 ModuleRegistry.registerModules([AllCommunityModule]);
 
@@ -31,7 +32,7 @@ const COLUMN_DEFS: ColDef<TopicMessage>[] = [
   { field: "offset", headerName: "Offset", width: 100 },
   { field: "timestampMs", headerName: "Timestamp", valueFormatter: formatTimestamp, width: 200 },
   { field: "key", headerName: "Key", width: 150 },
-  { headerName: "Value", valueGetter: formatValue, flex: 1 },
+  { headerName: "Value", valueGetter: formatValue, cellRenderer: ValueCell, flex: 1 },
 ];
 
 const DEFAULT_COL_DEF: ColDef<TopicMessage> = {
@@ -116,6 +117,32 @@ export function DataTab({ connectionId, topicName, partitionId }: DataTabProps) 
     stoppedRef.current = true;
     setIsPlaying(false);
   }
+
+  /** Fetches just one row's payload (by its exact partition/offset) and patches it into the cached rows — reads the store directly so it always applies on top of the latest cached rows regardless of how long the fetch took. */
+  async function fetchPayloadForRow(row: TopicMessage) {
+    const result = await fetchMessages.mutateAsync({
+      connectionId,
+      topic: topicName,
+      filter: {
+        partitions: [row.partition],
+        maxMessagesPerPartition: 1,
+        maxTotalMessages: 1,
+        fromTimestampMs: null,
+        toTimestampMs: null,
+        offset: row.offset,
+        includePayload: true,
+      },
+    });
+    const updated = result.find((m) => m.partition === row.partition && m.offset === row.offset);
+    if (!updated) return;
+    const current = useTabDataStore.getState().messagesByTab[tabKey] ?? EMPTY_TAB_MESSAGES;
+    setTabMessages(
+      tabKey,
+      current.map((m) => (m.partition === row.partition && m.offset === row.offset ? updated : m)),
+    );
+  }
+
+  const gridContext: ValueCellContext = { fetchPayload: fetchPayloadForRow };
 
   return (
     <div className="data-tab">
@@ -207,8 +234,16 @@ export function DataTab({ connectionId, topicName, partitionId }: DataTabProps) 
           columnDefs={COLUMN_DEFS}
           defaultColDef={DEFAULT_COL_DEF}
           quickFilterText={searchText}
+          context={gridContext}
           overlayNoRowsTemplate="<span class='data-tab-no-rows'>No messages</span>"
           onRowClicked={(event) => {
+            // AG Grid's row-click detection runs regardless of stopPropagation
+            // on the Value column's "Fetch payload" button, so guard here
+            // instead — otherwise clicking it also opens the viewer with
+            // whatever (possibly payload-less) row data existed at click
+            // time, racing the in-flight per-row fetch.
+            const target = event.event?.target;
+            if (target instanceof HTMLElement && target.closest("button")) return;
             if (event.data) viewMessage(event.data);
           }}
         />
