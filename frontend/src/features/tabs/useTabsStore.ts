@@ -8,6 +8,7 @@ interface TabsState {
   loadTabs: () => Promise<void>;
   addTab: (name: string) => Promise<void>;
   renameTab: (id: string, name: string) => Promise<void>;
+  deleteTab: (id: string) => Promise<void>;
   selectTab: (id: string) => void;
 }
 
@@ -48,6 +49,22 @@ export const useTabsStore = create<TabsState>((set, get) => ({
       }));
     } catch (err) {
       set({ error: errorMessage(err, "Failed to rename tab") });
+    }
+  },
+  deleteTab: async (id: string) => {
+    try {
+      await api.deleteTab(id);
+      set((state) => {
+        const tabs = state.tabs.filter((tab) => tab.id !== id);
+        if (state.activeTabId !== id) {
+          return { tabs, error: null };
+        }
+        const closedIndex = state.tabs.findIndex((tab) => tab.id === id);
+        const fallback = state.tabs[closedIndex - 1] ?? state.tabs[closedIndex + 1] ?? null;
+        return { tabs, activeTabId: fallback?.id ?? null, error: null };
+      });
+    } catch (err) {
+      set({ error: errorMessage(err, "Failed to delete tab") });
     }
   },
   selectTab: (id: string) => set({ activeTabId: id }),

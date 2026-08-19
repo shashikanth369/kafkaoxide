@@ -8,6 +8,7 @@ export function TabBar() {
   const selectTab = useTabsStore((s) => s.selectTab);
   const renameTab = useTabsStore((s) => s.renameTab);
   const addTab = useTabsStore((s) => s.addTab);
+  const deleteTab = useTabsStore((s) => s.deleteTab);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draftName, setDraftName] = useState("");
 
@@ -40,6 +41,7 @@ export function TabBar() {
           <div
             key={tab.id}
             role="tab"
+            aria-label={tab.name}
             aria-selected={tab.id === activeTabId}
             tabIndex={0}
             className="tab"
@@ -60,7 +62,20 @@ export function TabBar() {
                 }}
               />
             ) : (
-              <span>{tab.name}</span>
+              <>
+                <span>{tab.name}</span>
+                <button
+                  type="button"
+                  className="tab-close"
+                  aria-label={`Close tab ${tab.name}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    deleteTab(tab.id);
+                  }}
+                >
+                  ×
+                </button>
+              </>
             )}
           </div>
         ))}

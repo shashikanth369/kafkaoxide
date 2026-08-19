@@ -144,9 +144,26 @@ body {
   gap: 4px;
 }
 .tab {
-  padding: 2px 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  font-size: 14px;
   border-radius: 4px;
   cursor: pointer;
+}
+.tab-close {
+  background: none;
+  border: none;
+  color: inherit;
+  font-size: 14px;
+  line-height: 1;
+  padding: 0 2px;
+  cursor: pointer;
+  opacity: 0.7;
+}
+.tab-close:hover {
+  opacity: 1;
 }
 .tab[aria-selected="true"] {
   background: var(--color-accent);

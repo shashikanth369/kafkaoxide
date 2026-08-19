@@ -67,6 +67,26 @@ describe("TabBar", () => {
     expect(useTabsStore.getState().activeTabId).toBe("new-1");
   });
 
+  it("closes a tab via its close button without selecting it first", async () => {
+    setInvokeHandlers({ tab_delete: () => undefined });
+    useTabsStore.setState({
+      tabs: [
+        { id: "1", name: "Alpha", position: 0 },
+        { id: "2", name: "Beta", position: 1 },
+      ],
+      activeTabId: "1",
+    });
+    const user = userEvent.setup();
+    render(<TabBar />);
+
+    await user.click(screen.getByLabelText("Close tab Beta"));
+
+    await waitFor(() => {
+      expect(useTabsStore.getState().tabs.map((t) => t.id)).toEqual(["1"]);
+    });
+    expect(useTabsStore.getState().activeTabId).toBe("1");
+  });
+
   it("selects a tab via keyboard activation (Enter and Space)", async () => {
     useTabsStore.setState({
       tabs: [
