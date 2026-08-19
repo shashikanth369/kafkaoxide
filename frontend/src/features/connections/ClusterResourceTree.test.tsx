@@ -100,6 +100,54 @@ describe("ClusterResourceTree", () => {
     });
   });
 
+  it("does not fetch a topic's partitions until it is expanded", async () => {
+    const listPartitions = vi.fn(() => [{ id: 0, leader: 1, replicas: [1], isr: [1], lowOffset: 0, highOffset: 0 }]);
+    setInvokeHandlers({
+      connection_list_topics: () => [{ name: "orders", partitionCount: 3 }],
+      connection_list_partitions: listPartitions,
+    });
+    const user = userEvent.setup();
+    renderWithClient(<ClusterResourceTree connectionId="1" />);
+    await user.click(screen.getByTestId("category-Topics"));
+    await screen.findByText("orders");
+
+    expect(listPartitions).not.toHaveBeenCalled();
+  });
+
+  it("expands a topic to show its partitions when its caret is clicked", async () => {
+    setInvokeHandlers({
+      connection_list_topics: () => [{ name: "orders", partitionCount: 3 }],
+      connection_list_partitions: () => [
+        { id: 0, leader: 1, replicas: [1], isr: [1], lowOffset: 0, highOffset: 10 },
+        { id: 1, leader: 2, replicas: [2], isr: [2], lowOffset: 0, highOffset: 5 },
+      ],
+    });
+    const user = userEvent.setup();
+    renderWithClient(<ClusterResourceTree connectionId="1" />);
+    await user.click(screen.getByTestId("category-Topics"));
+    await screen.findByText("orders");
+
+    await user.click(screen.getByLabelText("Expand orders"));
+
+    expect(await screen.findByText("Partition 0")).toBeInTheDocument();
+    expect(screen.getByText("Partition 1")).toBeInTheDocument();
+  });
+
+  it("does not select the topic as a side effect of expanding it", async () => {
+    setInvokeHandlers({
+      connection_list_topics: () => [{ name: "orders", partitionCount: 3 }],
+      connection_list_partitions: () => [],
+    });
+    const user = userEvent.setup();
+    renderWithClient(<ClusterResourceTree connectionId="1" />);
+    await user.click(screen.getByTestId("category-Topics"));
+    await screen.findByText("orders");
+
+    await user.click(screen.getByLabelText("Expand orders"));
+
+    expect(useWorkspaceSelectionStore.getState().selection).toBeNull();
+  });
+
   it("fetches and shows consumer groups once Consumers is expanded", async () => {
     const listGroups = vi.fn(() => [{ groupId: "billing", state: "Stable" }]);
     setInvokeHandlers({ connection_list_consumer_groups: listGroups });

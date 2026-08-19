@@ -1,6 +1,7 @@
-import { BrokerSummary, ConsumerGroupSummary, TopicSummary } from "../../lib/tauri";
+import { BrokerSummary, ConsumerGroupSummary } from "../../lib/tauri";
 import { useWorkspaceSelectionStore } from "../workspace/useWorkspaceSelectionStore";
 import { ResourceCategory } from "./ResourceCategory";
+import { TopicCategory } from "./TopicCategory";
 import { useBrokers, useConsumerGroups, useTopics } from "./useClusterResources";
 
 export interface ClusterResourceTreeProps {
@@ -45,14 +46,11 @@ export function ClusterResourceTree({ connectionId }: ClusterResourceTreeProps) 
         }
         onSelect={(broker) => selectBroker(connectionId, broker.id)}
       />
-      <ResourceCategory<TopicSummary>
-        label="Topics"
-        items={topics.data}
+      <TopicCategory
+        connectionId={connectionId}
+        topics={topics.data}
         isLoading={topics.isLoading}
         onExpand={noop}
-        getKey={(topic) => topic.name}
-        getLabel={(topic) => topic.name}
-        matchesSearch={(topic, query) => topic.name.toLowerCase().includes(query.toLowerCase())}
         isSelected={(topic) =>
           selection?.type === "topic" &&
           selection.connectionId === connectionId &&

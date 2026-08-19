@@ -35,18 +35,19 @@ export function useCountTopicMessages() {
   });
 }
 
-/** Backs the topic Data tab's Play button. */
+/** Backs the topic Data tab's Fetch button. */
 export function useFetchMessages() {
   return useMutation<TopicMessage[], Error, { connectionId: string; topic: string; filter: MessageFilter }>({
     mutationFn: ({ connectionId, topic, filter }) => api.fetchMessages(connectionId, topic, filter),
   });
 }
 
-/** Backs the topic detail panel's Partitions tab. */
-export function usePartitions(connectionId: string, topic: string) {
+/** Backs the topic detail panel's Partitions tab, and the sidebar tree's per-topic partition expand. */
+export function usePartitions(connectionId: string, topic: string, enabled: boolean = true) {
   return useQuery({
     queryKey: ["partitions", connectionId, topic],
     queryFn: () => api.listPartitions(connectionId, topic),
+    enabled,
   });
 }
 
