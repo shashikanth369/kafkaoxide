@@ -1,29 +1,26 @@
-import { useState } from "react";
 import { LogsPanel } from "./LogsPanel";
 import { useLogsListener } from "./useLogsListener";
-
-const TOOLS = [{ id: "logs", label: "Logs" }] as const;
+import { useLogsStore } from "./useLogsStore";
 
 export function BottomPanel() {
   useLogsListener();
-  const [activeTool, setActiveTool] = useState<string>("logs");
+  const isExpanded = useLogsStore((s) => s.isExpanded);
+  const toggleExpanded = useLogsStore((s) => s.toggleExpanded);
 
   return (
     <div className="bottom-panel">
-      <div className="bottom-panel-tabs" role="tablist">
-        {TOOLS.map((tool) => (
-          <button
-            key={tool.id}
-            type="button"
-            role="tab"
-            aria-selected={activeTool === tool.id}
-            onClick={() => setActiveTool(tool.id)}
-          >
-            {tool.label}
-          </button>
-        ))}
+      <div className="bottom-panel-status-strip">
+        <button
+          type="button"
+          aria-label="Toggle logs panel"
+          aria-expanded={isExpanded}
+          className="bottom-panel-toggle"
+          onClick={toggleExpanded}
+        >
+          {isExpanded ? "▾" : "▸"} Logs
+        </button>
       </div>
-      <div className="bottom-panel-content">{activeTool === "logs" && <LogsPanel />}</div>
+      {isExpanded && <div className="bottom-panel-content">{<LogsPanel />}</div>}
     </div>
   );
 }

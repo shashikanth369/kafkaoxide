@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { useLogsStore } from "./useLogsStore";
 import { BottomPanel } from "./BottomPanel";
 
@@ -13,18 +14,40 @@ vi.mock("@tauri-apps/api/event", () => ({
 }));
 
 beforeEach(() => {
-  useLogsStore.setState({ entries: [] });
+  localStorage.clear();
+  useLogsStore.setState({ entries: [], isExpanded: false });
   capturedHandler = null;
 });
 
 describe("BottomPanel logs tool", () => {
-  it("shows an empty state with no log entries", () => {
+  it("is collapsed by default", () => {
     render(<BottomPanel />);
+    expect(screen.queryByText("No log entries yet.")).not.toBeInTheDocument();
+  });
+
+  it("expands when the toggle icon is clicked", async () => {
+    const user = userEvent.setup();
+    render(<BottomPanel />);
+
+    await user.click(screen.getByLabelText("Toggle logs panel"));
+
     expect(screen.getByText("No log entries yet.")).toBeInTheDocument();
   });
 
-  it("renders a log entry pushed over the tauri event channel", async () => {
+  it("collapses again on a second click", async () => {
+    const user = userEvent.setup();
     render(<BottomPanel />);
+
+    await user.click(screen.getByLabelText("Toggle logs panel"));
+    await user.click(screen.getByLabelText("Toggle logs panel"));
+
+    expect(screen.queryByText("No log entries yet.")).not.toBeInTheDocument();
+  });
+
+  it("renders a log entry pushed over the tauri event channel once expanded", async () => {
+    const user = userEvent.setup();
+    render(<BottomPanel />);
+    await user.click(screen.getByLabelText("Toggle logs panel"));
 
     await vi.waitFor(() => expect(capturedHandler).not.toBeNull());
     capturedHandler!({

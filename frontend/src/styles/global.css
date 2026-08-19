@@ -132,11 +132,31 @@ body {
 }
 
 .bottom-panel {
-  height: 160px;
   border-top: 1px solid var(--color-border);
   background: var(--color-bg-elevated);
   display: flex;
   flex-direction: column;
+}
+.bottom-panel-status-strip {
+  display: flex;
+  align-items: center;
+  padding: 2px 8px;
+}
+.bottom-panel-toggle {
+  background: none;
+  border: none;
+  color: var(--color-fg-muted);
+  font-size: 12px;
+  cursor: pointer;
+  padding: 2px 4px;
+}
+.bottom-panel-toggle:hover {
+  color: var(--color-fg);
+}
+.bottom-panel-content {
+  height: 160px;
+  overflow: auto;
+  border-top: 1px solid var(--color-border);
 }
 
 .tab-bar {
