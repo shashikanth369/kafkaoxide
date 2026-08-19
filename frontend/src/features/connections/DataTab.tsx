@@ -118,21 +118,12 @@ export function DataTab({ connectionId, topicName }: DataTabProps) {
           <input type="datetime-local" value={form.toDate} onChange={(e) => updateForm({ toDate: e.target.value })} />
         </label>
         <label>
-          From offset
+          Offset
           <input
             inputMode="numeric"
-            value={form.fromOffset}
-            onChange={(e) => updateForm({ fromOffset: e.target.value })}
+            value={form.offset}
+            onChange={(e) => updateForm({ offset: e.target.value })}
             placeholder="e.g. 100"
-          />
-        </label>
-        <label>
-          To offset
-          <input
-            inputMode="numeric"
-            value={form.toOffset}
-            onChange={(e) => updateForm({ toOffset: e.target.value })}
-            placeholder="e.g. 200"
           />
         </label>
       </div>

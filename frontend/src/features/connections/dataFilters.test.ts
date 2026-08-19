@@ -9,8 +9,7 @@ describe("emptyFilterForm", () => {
     expect(form.partitions).toBe("");
     expect(form.fromDate).toBe("");
     expect(form.toDate).toBe("");
-    expect(form.fromOffset).toBe("");
-    expect(form.toOffset).toBe("");
+    expect(form.offset).toBe("");
     expect(form.includePayload).toBe(false);
   });
 });
@@ -23,8 +22,7 @@ describe("toMessageFilter", () => {
       maxTotalMessages: null,
       fromTimestampMs: null,
       toTimestampMs: null,
-      fromOffset: null,
-      toOffset: null,
+      offset: null,
       includePayload: false,
     });
   });
@@ -58,10 +56,8 @@ describe("toMessageFilter", () => {
     expect(toMessageFilter(form).partitions).toBeNull();
   });
 
-  it("parses fromOffset and toOffset as numbers", () => {
-    const form = { ...emptyFilterForm(), fromOffset: "100", toOffset: "200" };
-    const filter = toMessageFilter(form);
-    expect(filter.fromOffset).toBe(100);
-    expect(filter.toOffset).toBe(200);
+  it("parses offset as a number", () => {
+    const form = { ...emptyFilterForm(), offset: "100" };
+    expect(toMessageFilter(form).offset).toBe(100);
   });
 });

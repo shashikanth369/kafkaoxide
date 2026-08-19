@@ -21,10 +21,10 @@ pub fn partition_limits(
         .collect()
 }
 
-/// Clamps a caller-provided `fromOffset`/`toOffset` into a partition's
-/// `[low, high]` watermark range — Kafka rejects an assign at an offset
-/// outside that range, so a stale or out-of-range value degrades to the
-/// nearest valid boundary instead of erroring the whole fetch.
+/// Clamps a caller-provided `offset` into a partition's `[low, high]`
+/// watermark range — Kafka rejects an assign at an offset outside that
+/// range, so a stale or out-of-range value degrades to the nearest valid
+/// boundary instead of erroring the whole fetch.
 pub fn clamp_offset(offset: i64, low: i64, high: i64) -> i64 {
     offset.clamp(low, high)
 }

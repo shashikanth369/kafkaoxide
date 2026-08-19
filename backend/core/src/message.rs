@@ -12,11 +12,10 @@ pub struct MessageFilter {
     pub max_total_messages: Option<u32>,
     pub from_timestamp_ms: Option<i64>,
     pub to_timestamp_ms: Option<i64>,
-    /// Explicit offset bounds, taking priority over the timestamp fields
-    /// above when both are set. Clamped to each partition's watermark
-    /// range rather than erroring on a stale/out-of-range value.
-    pub from_offset: Option<i64>,
-    pub to_offset: Option<i64>,
+    /// An explicit starting offset, taking priority over `from_timestamp_ms`
+    /// when both are set. Clamped to each partition's watermark range
+    /// rather than erroring on a stale/out-of-range value.
+    pub offset: Option<i64>,
     /// The Data tab's "Load message payload" checkbox — when false
     /// (the default), `TopicMessage::payload_base64` comes back `None` for
     /// every row, so a metadata-only browse doesn't pay for encoding/
@@ -50,7 +49,7 @@ mod tests {
         let json = serde_json::to_string(&filter).unwrap();
         assert_eq!(
             json,
-            r#"{"partitions":null,"maxMessagesPerPartition":null,"maxTotalMessages":null,"fromTimestampMs":null,"toTimestampMs":null,"fromOffset":null,"toOffset":null,"includePayload":false}"#
+            r#"{"partitions":null,"maxMessagesPerPartition":null,"maxTotalMessages":null,"fromTimestampMs":null,"toTimestampMs":null,"offset":null,"includePayload":false}"#
         );
     }
 

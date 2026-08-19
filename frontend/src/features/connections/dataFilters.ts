@@ -9,9 +9,8 @@ export interface FilterFormState {
   /** `<input type="datetime-local">` value. */
   fromDate: string;
   toDate: string;
-  /** Explicit offset bounds — take priority over fromDate/toDate on the backend when both are set. */
-  fromOffset: string;
-  toOffset: string;
+  /** An explicit starting offset — takes priority over fromDate on the backend when both are set. */
+  offset: string;
   /** The "Load message payload" checkbox below Play. */
   includePayload: boolean;
 }
@@ -23,8 +22,7 @@ export function emptyFilterForm(): FilterFormState {
     partitions: "",
     fromDate: "",
     toDate: "",
-    fromOffset: "",
-    toOffset: "",
+    offset: "",
     includePayload: false,
   };
 }
@@ -60,8 +58,7 @@ export function toMessageFilter(form: FilterFormState): MessageFilter {
     maxTotalMessages: parsePositiveInt(form.maxTotalMessages),
     fromTimestampMs: parseDate(form.fromDate),
     toTimestampMs: parseDate(form.toDate),
-    fromOffset: parsePositiveInt(form.fromOffset),
-    toOffset: parsePositiveInt(form.toOffset),
+    offset: parsePositiveInt(form.offset),
     includePayload: form.includePayload,
   };
 }

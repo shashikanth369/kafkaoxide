@@ -364,10 +364,10 @@ impl KafkaClient for RdKafkaClient {
                     .attach_printable_lazy(|| format!("failed to fetch watermarks for {topic}:{partition}"))
             };
 
-            let start_offsets: BTreeMap<i32, i64> = if let Some(from_offset) = filter.from_offset {
+            let start_offsets: BTreeMap<i32, i64> = if let Some(offset) = filter.offset {
                 target_partitions
                     .iter()
-                    .map(|&p| watermarks(p).map(|(low, high)| (p, clamp_offset(from_offset, low, high))))
+                    .map(|&p| watermarks(p).map(|(low, high)| (p, clamp_offset(offset, low, high))))
                     .collect::<Result<_, _>>()?
             } else if let Some(from_ms) = filter.from_timestamp_ms {
                 resolve_offsets_by_timestamp(&consumer, &topic, &target_partitions, from_ms, |p| {
@@ -380,12 +380,7 @@ impl KafkaClient for RdKafkaClient {
                     .collect::<Result<_, _>>()?
             };
 
-            let end_offsets: BTreeMap<i32, i64> = if let Some(to_offset) = filter.to_offset {
-                target_partitions
-                    .iter()
-                    .map(|&p| watermarks(p).map(|(low, high)| (p, clamp_offset(to_offset, low, high))))
-                    .collect::<Result<_, _>>()?
-            } else if let Some(to_ms) = filter.to_timestamp_ms {
+            let end_offsets: BTreeMap<i32, i64> = if let Some(to_ms) = filter.to_timestamp_ms {
                 resolve_offsets_by_timestamp(&consumer, &topic, &target_partitions, to_ms, |p| {
                     watermarks(p).map(|(_, high)| high)
                 })?
