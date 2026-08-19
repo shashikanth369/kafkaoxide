@@ -16,7 +16,7 @@ use std::collections::{BTreeMap, HashMap};
 use std::time::Duration;
 
 use crate::assignment::decode_consumer_protocol_assignment;
-use crate::config::{build_client_config, client_config};
+use crate::config::{build_client_config, client_config, BrokerSslConfig};
 use crate::messages::{apply_total_cap, clamp_offset, partition_limits};
 
 const METADATA_TIMEOUT: Duration = Duration::from_secs(5);
@@ -49,6 +49,7 @@ pub trait KafkaClient: Send + Sync {
         security_protocol: SecurityProtocol,
         sasl_mechanism: Option<SaslMechanism>,
         password: Option<&str>,
+        ssl: BrokerSslConfig<'_>,
     ) -> Result<ConnectionStatus, AppError>;
 
     /// Backs the tree's "Brokers" sub-list once a cluster is connected.
@@ -166,6 +167,7 @@ impl KafkaClient for RdKafkaClient {
             SecurityProtocol::Plaintext,
             None,
             None,
+            BrokerSslConfig::default(),
         ))
         .await
     }
@@ -176,12 +178,14 @@ impl KafkaClient for RdKafkaClient {
         security_protocol: SecurityProtocol,
         sasl_mechanism: Option<SaslMechanism>,
         password: Option<&str>,
+        ssl: BrokerSslConfig<'_>,
     ) -> Result<ConnectionStatus, AppError> {
         run_probe(build_client_config(
             bootstrap_servers,
             security_protocol,
             sasl_mechanism,
             password,
+            ssl,
         ))
         .await
     }
@@ -714,6 +718,8 @@ mod tests {
             schema_registry_endpoint: None,
             schema_registry_trust_store_location: None,
             schema_registry_keystore_location: None,
+            ssl_truststore_location: None,
+            ssl_keystore_location: None,
             created_at: "now".into(),
             updated_at: "now".into(),
         }
@@ -741,7 +747,13 @@ mod tests {
         // level instead, in `config::tests`.
         let client = RdKafkaClient;
         let status = client
-            .test_connection("127.0.0.1:1", SecurityProtocol::Plaintext, None, None)
+            .test_connection(
+                "127.0.0.1:1",
+                SecurityProtocol::Plaintext,
+                None,
+                None,
+                BrokerSslConfig::default(),
+            )
             .await
             .unwrap();
         assert_eq!(status, ConnectionStatus::Unreachable);
@@ -822,6 +834,7 @@ mod tests {
                 SecurityProtocol::SaslPlaintext,
                 Some(SaslMechanism::Plain),
                 None,
+                BrokerSslConfig::default(),
             )
             .await;
         assert!(result.is_err());

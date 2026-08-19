@@ -54,6 +54,11 @@ pub struct Connection {
     pub schema_registry_endpoint: Option<String>,
     pub schema_registry_trust_store_location: Option<String>,
     pub schema_registry_keystore_location: Option<String>,
+    /// Broker security tab — SSL/TLS material. Locations aren't secrets;
+    /// the matching passwords live only in the OS keychain (see
+    /// `NewConnection` below), same treatment as the schema registry fields.
+    pub ssl_truststore_location: Option<String>,
+    pub ssl_keystore_location: Option<String>,
     pub created_at: String,
     pub updated_at: String,
 }
@@ -82,6 +87,12 @@ pub struct NewConnection {
     pub schema_registry_keystore_location: Option<String>,
     pub schema_registry_keystore_password: Option<String>,
     pub schema_registry_keystore_key_password: Option<String>,
+    /// Broker security tab's "Broker security" section.
+    pub ssl_truststore_location: Option<String>,
+    pub ssl_truststore_password: Option<String>,
+    pub ssl_keystore_location: Option<String>,
+    pub ssl_keystore_password: Option<String>,
+    pub ssl_keystore_key_password: Option<String>,
 }
 
 impl fmt::Debug for NewConnection {
@@ -125,6 +136,14 @@ impl fmt::Debug for NewConnection {
             .field(
                 "schema_registry_keystore_key_password",
                 &redacted(&self.schema_registry_keystore_key_password),
+            )
+            .field("ssl_truststore_location", &self.ssl_truststore_location)
+            .field("ssl_truststore_password", &redacted(&self.ssl_truststore_password))
+            .field("ssl_keystore_location", &self.ssl_keystore_location)
+            .field("ssl_keystore_password", &redacted(&self.ssl_keystore_password))
+            .field(
+                "ssl_keystore_key_password",
+                &redacted(&self.ssl_keystore_key_password),
             )
             .finish()
     }
@@ -184,6 +203,8 @@ mod tests {
             schema_registry_endpoint: None,
             schema_registry_trust_store_location: None,
             schema_registry_keystore_location: None,
+            ssl_truststore_location: None,
+            ssl_keystore_location: None,
             created_at: "now".into(),
             updated_at: "now".into(),
         }
@@ -208,6 +229,11 @@ mod tests {
             schema_registry_keystore_location: None,
             schema_registry_keystore_password: None,
             schema_registry_keystore_key_password: None,
+            ssl_truststore_location: None,
+            ssl_truststore_password: None,
+            ssl_keystore_location: None,
+            ssl_keystore_password: None,
+            ssl_keystore_key_password: None,
         }
     }
 
@@ -229,6 +255,9 @@ mod tests {
         new_connection.schema_registry_trust_store_password = Some("trust-store-secret".into());
         new_connection.schema_registry_keystore_password = Some("keystore-secret".into());
         new_connection.schema_registry_keystore_key_password = Some("keystore-key-secret".into());
+        new_connection.ssl_truststore_password = Some("broker-trust-store-secret".into());
+        new_connection.ssl_keystore_password = Some("broker-keystore-secret".into());
+        new_connection.ssl_keystore_key_password = Some("broker-keystore-key-secret".into());
 
         let debug_output = format!("{:?}", new_connection);
 
@@ -236,7 +265,10 @@ mod tests {
         assert!(!debug_output.contains("trust-store-secret"));
         assert!(!debug_output.contains("keystore-secret"));
         assert!(!debug_output.contains("keystore-key-secret"));
-        assert_eq!(debug_output.matches("[redacted]").count(), 4);
+        assert!(!debug_output.contains("broker-trust-store-secret"));
+        assert!(!debug_output.contains("broker-keystore-secret"));
+        assert!(!debug_output.contains("broker-keystore-key-secret"));
+        assert_eq!(debug_output.matches("[redacted]").count(), 7);
     }
 
     #[test]

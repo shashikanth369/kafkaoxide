@@ -5,4 +5,5 @@ pub mod messages;
 pub mod zookeeper;
 
 pub use client::{KafkaClient, RdKafkaClient};
+pub use config::BrokerSslConfig;
 pub use zookeeper::{TcpZookeeperClient, ZookeeperClient};

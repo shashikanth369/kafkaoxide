@@ -1,5 +1,6 @@
 use crate::state::AppState;
 use kafkaoxide_core::{Connection, ConnectionStatus, NewConnection};
+use kafkaoxide_kafka::BrokerSslConfig;
 use tauri::{AppHandle, State};
 
 #[derive(serde::Serialize)]
@@ -15,34 +16,33 @@ impl From<error_stack::Report<kafkaoxide_core::AppError>> for CommandError {
     }
 }
 
-/// The New Connection modal's Schema Registry secret fields, each stored
-/// under its own keyed slot in the OS keychain (see
+/// The New Connection modal's Schema Registry and broker-SSL secret fields,
+/// each stored under its own keyed slot in the OS keychain (see
 /// `kafkaoxide_secrets::SecretStore`) rather than in the database.
-const SCHEMA_REGISTRY_SECRET_KEYS: [&str; 4] = [
+const SECRET_KEYS: [&str; 7] = [
     "schema_registry_basic_auth_credentials",
     "schema_registry_trust_store_password",
     "schema_registry_keystore_password",
     "schema_registry_keystore_key_password",
+    "ssl_truststore_password",
+    "ssl_keystore_password",
+    "ssl_keystore_key_password",
 ];
 
-fn schema_registry_secret_values(new_connection: &NewConnection) -> [Option<&str>; 4] {
+fn secret_values(new_connection: &NewConnection) -> [Option<&str>; 7] {
     [
         new_connection.schema_registry_basic_auth_credentials.as_deref(),
         new_connection.schema_registry_trust_store_password.as_deref(),
         new_connection.schema_registry_keystore_password.as_deref(),
         new_connection.schema_registry_keystore_key_password.as_deref(),
+        new_connection.ssl_truststore_password.as_deref(),
+        new_connection.ssl_keystore_password.as_deref(),
+        new_connection.ssl_keystore_key_password.as_deref(),
     ]
 }
 
-fn store_schema_registry_secrets(
-    state: &AppState,
-    connection_id: &str,
-    new_connection: &NewConnection,
-) -> Result<(), CommandError> {
-    for (key, value) in SCHEMA_REGISTRY_SECRET_KEYS
-        .iter()
-        .zip(schema_registry_secret_values(new_connection))
-    {
+fn store_secrets(state: &AppState, connection_id: &str, new_connection: &NewConnection) -> Result<(), CommandError> {
+    for (key, value) in SECRET_KEYS.iter().zip(secret_values(new_connection)) {
         match value {
             Some(value) => state.secrets.set_secret(connection_id, key, value)?,
             None => state.secrets.delete_secret(connection_id, key)?,
@@ -63,7 +63,7 @@ pub async fn connection_create(
     new_connection: NewConnection,
 ) -> Result<Connection, CommandError> {
     let connection = kafkaoxide_db::connections::create(&state.pool, &new_connection).await?;
-    store_schema_registry_secrets(&state, &connection.id, &new_connection)?;
+    store_secrets(&state, &connection.id, &new_connection)?;
     crate::logging::emit_log(&app, "info", format!("Created connection \"{}\"", connection.name));
     Ok(connection)
 }
@@ -76,7 +76,7 @@ pub async fn connection_update(
     new_connection: NewConnection,
 ) -> Result<Connection, CommandError> {
     let connection = kafkaoxide_db::connections::update(&state.pool, &id, &new_connection).await?;
-    store_schema_registry_secrets(&state, &connection.id, &new_connection)?;
+    store_secrets(&state, &connection.id, &new_connection)?;
     crate::logging::emit_log(&app, "info", format!("Updated connection \"{}\"", connection.name));
     Ok(connection)
 }
@@ -88,7 +88,7 @@ pub async fn connection_delete(
     id: String,
 ) -> Result<(), CommandError> {
     kafkaoxide_db::connections::delete(&state.pool, &id).await?;
-    for key in SCHEMA_REGISTRY_SECRET_KEYS {
+    for key in SECRET_KEYS {
         state.secrets.delete_secret(&id, key)?;
     }
     state.connections.mark_disconnected(&id);
@@ -142,6 +142,12 @@ pub async fn connection_test(
             new_connection.security_protocol,
             new_connection.sasl_mechanism,
             None,
+            BrokerSslConfig {
+                truststore_location: new_connection.ssl_truststore_location.as_deref(),
+                keystore_location: new_connection.ssl_keystore_location.as_deref(),
+                keystore_password: new_connection.ssl_keystore_password.as_deref(),
+                keystore_key_password: new_connection.ssl_keystore_key_password.as_deref(),
+            },
         )
         .await?)
 }

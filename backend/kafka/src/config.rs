@@ -1,6 +1,23 @@
 use kafkaoxide_core::{Connection, SaslMechanism, SecurityProtocol};
 use rdkafka::ClientConfig;
 
+/// Broker TLS material from the New Connection modal's Security tab. Only
+/// `truststore_location`, `keystore_location`, `keystore_password`, and
+/// `keystore_key_password` map to a real librdkafka config property
+/// (`ssl.ca.location`, `ssl.keystore.location`, `ssl.keystore.password`,
+/// and `ssl.key.password` respectively) — librdkafka verifies broker
+/// certificates from an unencrypted CA file via `ssl.ca.location` and has
+/// no concept of a password-protected Java-style truststore, so
+/// `truststore_password` is accepted and stored (see `NewConnection`) but
+/// deliberately never applied to a `ClientConfig` here.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct BrokerSslConfig<'a> {
+    pub truststore_location: Option<&'a str>,
+    pub keystore_location: Option<&'a str>,
+    pub keystore_password: Option<&'a str>,
+    pub keystore_key_password: Option<&'a str>,
+}
+
 /// Builds a `ClientConfig` from raw values rather than a saved `Connection`.
 /// Used for the New Connection modal's ping/Test flows, which probe
 /// connectivity for values the user has typed but not saved yet.
@@ -9,6 +26,7 @@ pub fn build_client_config(
     security_protocol: SecurityProtocol,
     sasl_mechanism: Option<SaslMechanism>,
     password: Option<&str>,
+    ssl: BrokerSslConfig<'_>,
 ) -> ClientConfig {
     let mut config = ClientConfig::new();
     config.set("bootstrap.servers", bootstrap_servers);
@@ -21,15 +39,39 @@ pub fn build_client_config(
         }
     }
 
+    if let Some(location) = ssl.truststore_location {
+        config.set("ssl.ca.location", location);
+    }
+    if let Some(location) = ssl.keystore_location {
+        config.set("ssl.keystore.location", location);
+    }
+    if let Some(password) = ssl.keystore_password {
+        config.set("ssl.keystore.password", password);
+    }
+    if let Some(password) = ssl.keystore_key_password {
+        config.set("ssl.key.password", password);
+    }
+
     config
 }
 
+/// Builds a `ClientConfig` for a saved connection. `ssl_truststore_location`/
+/// `ssl_keystore_location` come straight from the connection (not secrets);
+/// the keystore passwords aren't retrieved from the OS keychain here yet —
+/// same scope boundary as the SASL `password` parameter above, which every
+/// caller of this function currently passes as `None` too.
 pub fn client_config(connection: &Connection, password: Option<&str>) -> ClientConfig {
     build_client_config(
         &connection.bootstrap_servers,
         connection.security_protocol,
         connection.sasl_mechanism,
         password,
+        BrokerSslConfig {
+            truststore_location: connection.ssl_truststore_location.as_deref(),
+            keystore_location: connection.ssl_keystore_location.as_deref(),
+            keystore_password: None,
+            keystore_key_password: None,
+        },
     )
 }
 
@@ -54,6 +96,8 @@ mod tests {
             schema_registry_endpoint: None,
             schema_registry_trust_store_location: None,
             schema_registry_keystore_location: None,
+            ssl_truststore_location: None,
+            ssl_keystore_location: None,
             created_at: "now".into(),
             updated_at: "now".into(),
         }
@@ -81,5 +125,53 @@ mod tests {
 
         let config = client_config(&connection, None);
         assert_eq!(config.get("sasl.mechanism"), None);
+    }
+
+    #[test]
+    fn client_config_carries_a_saved_connections_ssl_locations() {
+        let mut connection = sample_connection();
+        connection.ssl_truststore_location = Some("/etc/broker-ts.pem".into());
+        connection.ssl_keystore_location = Some("/etc/broker-ks.p12".into());
+
+        let config = client_config(&connection, None);
+        assert_eq!(config.get("ssl.ca.location"), Some("/etc/broker-ts.pem"));
+        assert_eq!(config.get("ssl.keystore.location"), Some("/etc/broker-ks.p12"));
+    }
+
+    #[test]
+    fn build_client_config_sets_every_ssl_property_when_given() {
+        let config = build_client_config(
+            "localhost:9092",
+            SecurityProtocol::Ssl,
+            None,
+            None,
+            BrokerSslConfig {
+                truststore_location: Some("/etc/broker-ts.pem"),
+                keystore_location: Some("/etc/broker-ks.p12"),
+                keystore_password: Some("keystore-secret"),
+                keystore_key_password: Some("key-secret"),
+            },
+        );
+
+        assert_eq!(config.get("ssl.ca.location"), Some("/etc/broker-ts.pem"));
+        assert_eq!(config.get("ssl.keystore.location"), Some("/etc/broker-ks.p12"));
+        assert_eq!(config.get("ssl.keystore.password"), Some("keystore-secret"));
+        assert_eq!(config.get("ssl.key.password"), Some("key-secret"));
+    }
+
+    #[test]
+    fn build_client_config_omits_ssl_properties_when_none_given() {
+        let config = build_client_config(
+            "localhost:9092",
+            SecurityProtocol::Plaintext,
+            None,
+            None,
+            BrokerSslConfig::default(),
+        );
+
+        assert_eq!(config.get("ssl.ca.location"), None);
+        assert_eq!(config.get("ssl.keystore.location"), None);
+        assert_eq!(config.get("ssl.keystore.password"), None);
+        assert_eq!(config.get("ssl.key.password"), None);
     }
 }

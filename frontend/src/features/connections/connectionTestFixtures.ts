@@ -20,6 +20,11 @@ export function sampleNewConnection(overrides: Partial<NewConnection> = {}): New
     schemaRegistryKeystoreLocation: null,
     schemaRegistryKeystorePassword: null,
     schemaRegistryKeystoreKeyPassword: null,
+    sslTruststoreLocation: null,
+    sslTruststorePassword: null,
+    sslKeystoreLocation: null,
+    sslKeystorePassword: null,
+    sslKeystoreKeyPassword: null,
     ...overrides,
   };
 }

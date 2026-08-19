@@ -44,6 +44,8 @@ export interface Connection {
   schemaRegistryEndpoint: string | null;
   schemaRegistryTrustStoreLocation: string | null;
   schemaRegistryKeystoreLocation: string | null;
+  sslTruststoreLocation: string | null;
+  sslKeystoreLocation: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -66,6 +68,11 @@ export interface NewConnection {
   schemaRegistryKeystoreLocation: string | null;
   schemaRegistryKeystorePassword: string | null;
   schemaRegistryKeystoreKeyPassword: string | null;
+  sslTruststoreLocation: string | null;
+  sslTruststorePassword: string | null;
+  sslKeystoreLocation: string | null;
+  sslKeystorePassword: string | null;
+  sslKeystoreKeyPassword: string | null;
 }
 
 export interface Tab {

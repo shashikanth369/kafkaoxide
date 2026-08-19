@@ -22,6 +22,8 @@ struct ConnectionRow {
     schema_registry_endpoint: Option<String>,
     schema_registry_trust_store_location: Option<String>,
     schema_registry_keystore_location: Option<String>,
+    ssl_truststore_location: Option<String>,
+    ssl_keystore_location: Option<String>,
     created_at: String,
     updated_at: String,
 }
@@ -53,6 +55,8 @@ impl ConnectionRow {
             schema_registry_endpoint: self.schema_registry_endpoint,
             schema_registry_trust_store_location: self.schema_registry_trust_store_location,
             schema_registry_keystore_location: self.schema_registry_keystore_location,
+            ssl_truststore_location: self.ssl_truststore_location,
+            ssl_keystore_location: self.ssl_keystore_location,
             created_at: self.created_at,
             updated_at: self.updated_at,
         })
@@ -71,9 +75,10 @@ pub async fn create(pool: &SqlitePool, new_conn: &NewConnection) -> Result<Conne
              zookeeper_enabled, zookeeper_host, zookeeper_port, zookeeper_chroot_path,
              security_protocol, sasl_mechanism, sasl_oauth_url,
              schema_registry_endpoint, schema_registry_trust_store_location, schema_registry_keystore_location,
+             ssl_truststore_location, ssl_keystore_location,
              created_at, updated_at
          )
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?15)",
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?17)",
     )
     .bind(&id)
     .bind(&new_conn.name)
@@ -89,6 +94,8 @@ pub async fn create(pool: &SqlitePool, new_conn: &NewConnection) -> Result<Conne
     .bind(&new_conn.schema_registry_endpoint)
     .bind(&new_conn.schema_registry_trust_store_location)
     .bind(&new_conn.schema_registry_keystore_location)
+    .bind(&new_conn.ssl_truststore_location)
+    .bind(&new_conn.ssl_keystore_location)
     .bind(&now)
     .execute(pool)
     .await
@@ -138,8 +145,9 @@ pub async fn update(pool: &SqlitePool, id: &str, new_conn: &NewConnection) -> Re
              zookeeper_enabled = ?4, zookeeper_host = ?5, zookeeper_port = ?6, zookeeper_chroot_path = ?7,
              security_protocol = ?8, sasl_mechanism = ?9, sasl_oauth_url = ?10,
              schema_registry_endpoint = ?11, schema_registry_trust_store_location = ?12, schema_registry_keystore_location = ?13,
-             updated_at = ?14
-         WHERE id = ?15",
+             ssl_truststore_location = ?14, ssl_keystore_location = ?15,
+             updated_at = ?16
+         WHERE id = ?17",
     )
     .bind(&new_conn.name)
     .bind(&new_conn.bootstrap_servers)
@@ -154,6 +162,8 @@ pub async fn update(pool: &SqlitePool, id: &str, new_conn: &NewConnection) -> Re
     .bind(&new_conn.schema_registry_endpoint)
     .bind(&new_conn.schema_registry_trust_store_location)
     .bind(&new_conn.schema_registry_keystore_location)
+    .bind(&new_conn.ssl_truststore_location)
+    .bind(&new_conn.ssl_keystore_location)
     .bind(&now)
     .bind(id)
     .execute(pool)
@@ -218,6 +228,11 @@ mod tests {
             schema_registry_keystore_location: None,
             schema_registry_keystore_password: None,
             schema_registry_keystore_key_password: None,
+            ssl_truststore_location: None,
+            ssl_truststore_password: None,
+            ssl_keystore_location: None,
+            ssl_keystore_password: None,
+            ssl_keystore_key_password: None,
         }
     }
 
@@ -249,6 +264,8 @@ mod tests {
         new_conn.schema_registry_endpoint = Some("https://schema-registry.local".to_string());
         new_conn.schema_registry_trust_store_location = Some("/etc/ts.jks".to_string());
         new_conn.schema_registry_keystore_location = Some("/etc/ks.jks".to_string());
+        new_conn.ssl_truststore_location = Some("/etc/broker-ts.pem".to_string());
+        new_conn.ssl_keystore_location = Some("/etc/broker-ks.p12".to_string());
 
         let created = create(&pool, &new_conn).await.unwrap();
 
@@ -267,6 +284,8 @@ mod tests {
         );
         assert_eq!(created.schema_registry_trust_store_location.as_deref(), Some("/etc/ts.jks"));
         assert_eq!(created.schema_registry_keystore_location.as_deref(), Some("/etc/ks.jks"));
+        assert_eq!(created.ssl_truststore_location.as_deref(), Some("/etc/broker-ts.pem"));
+        assert_eq!(created.ssl_keystore_location.as_deref(), Some("/etc/broker-ks.p12"));
 
         let fetched = get(&pool, &created.id).await.unwrap();
         assert_eq!(fetched, created);
@@ -280,6 +299,9 @@ mod tests {
         new_conn.schema_registry_trust_store_password = Some("ts-secret".to_string());
         new_conn.schema_registry_keystore_password = Some("ks-secret".to_string());
         new_conn.schema_registry_keystore_key_password = Some("ks-key-secret".to_string());
+        new_conn.ssl_truststore_password = Some("broker-ts-secret".to_string());
+        new_conn.ssl_keystore_password = Some("broker-ks-secret".to_string());
+        new_conn.ssl_keystore_key_password = Some("broker-ks-key-secret".to_string());
 
         let created = create(&pool, &new_conn).await.unwrap();
         let json = serde_json::to_string(&created).unwrap();
@@ -288,6 +310,9 @@ mod tests {
         assert!(!json.contains("ts-secret"));
         assert!(!json.contains("ks-secret"));
         assert!(!json.contains("ks-key-secret"));
+        assert!(!json.contains("broker-ts-secret"));
+        assert!(!json.contains("broker-ks-secret"));
+        assert!(!json.contains("broker-ks-key-secret"));
     }
 
     #[tokio::test]

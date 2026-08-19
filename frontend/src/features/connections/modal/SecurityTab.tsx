@@ -22,6 +22,44 @@ export function SecurityTab({ draft, onChange, disabled = false }: ConnectionTab
               ))}
             </select>
           </label>
+          <label>
+            Truststore location
+            <input
+              value={draft.sslTruststoreLocation}
+              onChange={(e) => onChange({ sslTruststoreLocation: e.target.value })}
+            />
+          </label>
+          <label>
+            Truststore password
+            <input
+              type="password"
+              value={draft.sslTruststorePassword}
+              onChange={(e) => onChange({ sslTruststorePassword: e.target.value })}
+            />
+          </label>
+          <label>
+            Keystore location
+            <input
+              value={draft.sslKeystoreLocation}
+              onChange={(e) => onChange({ sslKeystoreLocation: e.target.value })}
+            />
+          </label>
+          <label>
+            Keystore password
+            <input
+              type="password"
+              value={draft.sslKeystorePassword}
+              onChange={(e) => onChange({ sslKeystorePassword: e.target.value })}
+            />
+          </label>
+          <label>
+            Keystore private key password
+            <input
+              type="password"
+              value={draft.sslKeystoreKeyPassword}
+              onChange={(e) => onChange({ sslKeystoreKeyPassword: e.target.value })}
+            />
+          </label>
         </section>
       </fieldset>
     </div>

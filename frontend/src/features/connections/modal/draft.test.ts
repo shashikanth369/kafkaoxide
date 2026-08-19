@@ -143,6 +143,25 @@ describe("toNewConnection", () => {
     expect(result.schemaRegistryKeystorePassword).toBe("ks-secret");
     expect(result.schemaRegistryKeystoreKeyPassword).toBe("ks-key-secret");
   });
+
+  it("carries all broker SSL fields through, trimmed", () => {
+    const draft = emptyDraft();
+    draft.name = "Local";
+    draft.bootstrapServers = "localhost:9092";
+    draft.sslTruststoreLocation = " /etc/broker-ts.pem ";
+    draft.sslTruststorePassword = "broker-ts-secret";
+    draft.sslKeystoreLocation = "/etc/broker-ks.p12";
+    draft.sslKeystorePassword = "broker-ks-secret";
+    draft.sslKeystoreKeyPassword = "broker-ks-key-secret";
+
+    const result = toNewConnection(draft);
+
+    expect(result.sslTruststoreLocation).toBe("/etc/broker-ts.pem");
+    expect(result.sslTruststorePassword).toBe("broker-ts-secret");
+    expect(result.sslKeystoreLocation).toBe("/etc/broker-ks.p12");
+    expect(result.sslKeystorePassword).toBe("broker-ks-secret");
+    expect(result.sslKeystoreKeyPassword).toBe("broker-ks-key-secret");
+  });
 });
 
 function sampleConnection(overrides: Partial<Connection> = {}): Connection {
@@ -161,6 +180,8 @@ function sampleConnection(overrides: Partial<Connection> = {}): Connection {
     schemaRegistryEndpoint: "https://schema-registry.local",
     schemaRegistryTrustStoreLocation: "/etc/ts.jks",
     schemaRegistryKeystoreLocation: "/etc/ks.jks",
+    sslTruststoreLocation: "/etc/broker-ts.pem",
+    sslKeystoreLocation: "/etc/broker-ks.p12",
     createdAt: "2026-08-18T00:00:00Z",
     updatedAt: "2026-08-18T00:00:00Z",
     ...overrides,
@@ -184,6 +205,8 @@ describe("connectionToDraft", () => {
     expect(draft.schemaRegistryEndpoint).toBe("https://schema-registry.local");
     expect(draft.schemaRegistryTrustStoreLocation).toBe("/etc/ts.jks");
     expect(draft.schemaRegistryKeystoreLocation).toBe("/etc/ks.jks");
+    expect(draft.sslTruststoreLocation).toBe("/etc/broker-ts.pem");
+    expect(draft.sslKeystoreLocation).toBe("/etc/broker-ks.p12");
   });
 
   it("leaves every secret field blank, since Connection never carries secrets", () => {
@@ -193,6 +216,9 @@ describe("connectionToDraft", () => {
     expect(draft.schemaRegistryTrustStorePassword).toBe("");
     expect(draft.schemaRegistryKeystorePassword).toBe("");
     expect(draft.schemaRegistryKeystoreKeyPassword).toBe("");
+    expect(draft.sslTruststorePassword).toBe("");
+    expect(draft.sslKeystorePassword).toBe("");
+    expect(draft.sslKeystoreKeyPassword).toBe("");
   });
 
   it("renders a null zookeeper port as an empty string rather than 'null'", () => {

@@ -23,6 +23,11 @@ export interface ConnectionDraft {
   schemaRegistryKeystoreLocation: string;
   schemaRegistryKeystorePassword: string;
   schemaRegistryKeystoreKeyPassword: string;
+  sslTruststoreLocation: string;
+  sslTruststorePassword: string;
+  sslKeystoreLocation: string;
+  sslKeystorePassword: string;
+  sslKeystoreKeyPassword: string;
 }
 
 export function emptyDraft(): ConnectionDraft {
@@ -44,6 +49,11 @@ export function emptyDraft(): ConnectionDraft {
     schemaRegistryKeystoreLocation: "",
     schemaRegistryKeystorePassword: "",
     schemaRegistryKeystoreKeyPassword: "",
+    sslTruststoreLocation: "",
+    sslTruststorePassword: "",
+    sslKeystoreLocation: "",
+    sslKeystorePassword: "",
+    sslKeystoreKeyPassword: "",
   };
 }
 
@@ -92,6 +102,11 @@ export function toNewConnection(draft: ConnectionDraft): NewConnection {
     schemaRegistryKeystoreLocation: nullableTrim(draft.schemaRegistryKeystoreLocation),
     schemaRegistryKeystorePassword: nullableTrim(draft.schemaRegistryKeystorePassword),
     schemaRegistryKeystoreKeyPassword: nullableTrim(draft.schemaRegistryKeystoreKeyPassword),
+    sslTruststoreLocation: nullableTrim(draft.sslTruststoreLocation),
+    sslTruststorePassword: nullableTrim(draft.sslTruststorePassword),
+    sslKeystoreLocation: nullableTrim(draft.sslKeystoreLocation),
+    sslKeystorePassword: nullableTrim(draft.sslKeystorePassword),
+    sslKeystoreKeyPassword: nullableTrim(draft.sslKeystoreKeyPassword),
   };
 }
 
@@ -120,6 +135,11 @@ export function connectionToDraft(connection: Connection): ConnectionDraft {
     schemaRegistryKeystoreLocation: connection.schemaRegistryKeystoreLocation ?? "",
     schemaRegistryKeystorePassword: "",
     schemaRegistryKeystoreKeyPassword: "",
+    sslTruststoreLocation: connection.sslTruststoreLocation ?? "",
+    sslTruststorePassword: "",
+    sslKeystoreLocation: connection.sslKeystoreLocation ?? "",
+    sslKeystorePassword: "",
+    sslKeystoreKeyPassword: "",
   };
 }
 
