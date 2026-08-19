@@ -39,7 +39,8 @@ describe("MessagePayloadViewer", () => {
 
     await user.click(screen.getByRole("button", { name: "JSON" }));
 
-    expect(screen.getByText(/"id": 1/)).toBeInTheDocument();
+    expect(screen.getByText("id:")).toBeInTheDocument();
+    expect(screen.getByText('"orders"')).toBeInTheDocument();
   });
 
   it("shows an error message when JSON is requested but the payload isn't valid JSON", async () => {
@@ -94,5 +95,69 @@ describe("MessagePayloadViewer", () => {
 
     expect(screen.getByText(/partition 3/i)).toBeInTheDocument();
     expect(screen.getByText(/offset 17/i)).toBeInTheDocument();
+  });
+
+  it("opens on the Value tab by default", () => {
+    useMessageViewerStore.setState({
+      message: { partition: 0, offset: 1, timestampMs: null, key: null, payloadBase64: null, headers: [] },
+    });
+    render(<MessagePayloadViewer />);
+
+    expect(screen.getByRole("tab", { name: "Value" })).toHaveAttribute("aria-selected", "true");
+  });
+
+  it("shows a table of headers on the Headers tab", async () => {
+    useMessageViewerStore.setState({
+      message: {
+        partition: 0,
+        offset: 1,
+        timestampMs: null,
+        key: null,
+        payloadBase64: null,
+        headers: [
+          { key: "content-type", value: "application/json" },
+          { key: "empty-header", value: null },
+        ],
+      },
+    });
+    const user = userEvent.setup();
+    render(<MessagePayloadViewer />);
+
+    await user.click(screen.getByRole("tab", { name: "Headers" }));
+
+    expect(screen.getByText("content-type")).toBeInTheDocument();
+    expect(screen.getByText("application/json")).toBeInTheDocument();
+    expect(screen.getByText("empty-header")).toBeInTheDocument();
+  });
+
+  it("shows a placeholder on the Headers tab when the message has no headers", async () => {
+    useMessageViewerStore.setState({
+      message: { partition: 0, offset: 1, timestampMs: null, key: null, payloadBase64: null, headers: [] },
+    });
+    const user = userEvent.setup();
+    render(<MessagePayloadViewer />);
+
+    await user.click(screen.getByRole("tab", { name: "Headers" }));
+
+    expect(screen.getByText(/no headers/i)).toBeInTheDocument();
+  });
+
+  it("shows headers even when the payload wasn't loaded for this fetch", async () => {
+    useMessageViewerStore.setState({
+      message: {
+        partition: 0,
+        offset: 1,
+        timestampMs: null,
+        key: null,
+        payloadBase64: null,
+        headers: [{ key: "trace-id", value: "abc" }],
+      },
+    });
+    const user = userEvent.setup();
+    render(<MessagePayloadViewer />);
+
+    await user.click(screen.getByRole("tab", { name: "Headers" }));
+
+    expect(screen.getByText("trace-id")).toBeInTheDocument();
   });
 });

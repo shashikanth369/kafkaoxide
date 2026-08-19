@@ -13,13 +13,13 @@ export function bytesToText(bytes: Uint8Array): string {
   return new TextDecoder("utf-8").decode(bytes);
 }
 
-/** Pretty-prints a JSON string, or returns null if it isn't valid JSON. */
-export function tryFormatJson(text: string): string | null {
-  if (text.trim().length === 0) return null;
+/** Parses a JSON string into a value for JsonTreeView, or returns undefined if it isn't valid JSON. */
+export function tryParseJson(text: string): unknown {
+  if (text.trim().length === 0) return undefined;
   try {
-    return JSON.stringify(JSON.parse(text), null, 2);
+    return JSON.parse(text);
   } catch {
-    return null;
+    return undefined;
   }
 }
 

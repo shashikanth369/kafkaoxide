@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { base64ToBytes, bytesToText, detectConfluentAvro, tryFormatJson } from "./payloadDecoding";
+import { base64ToBytes, bytesToText, detectConfluentAvro, tryParseJson } from "./payloadDecoding";
 
 function toBase64(bytes: number[]): string {
   return btoa(String.fromCharCode(...bytes));
@@ -19,17 +19,17 @@ describe("base64ToBytes / bytesToText", () => {
   });
 });
 
-describe("tryFormatJson", () => {
-  it("pretty-prints valid JSON", () => {
-    expect(tryFormatJson('{"a":1}')).toBe('{\n  "a": 1\n}');
+describe("tryParseJson", () => {
+  it("parses valid JSON into a value", () => {
+    expect(tryParseJson('{"a":1}')).toEqual({ a: 1 });
   });
 
-  it("returns null for invalid JSON", () => {
-    expect(tryFormatJson("not json")).toBeNull();
+  it("returns undefined for invalid JSON", () => {
+    expect(tryParseJson("not json")).toBeUndefined();
   });
 
-  it("returns null for an empty string", () => {
-    expect(tryFormatJson("")).toBeNull();
+  it("returns undefined for an empty string", () => {
+    expect(tryParseJson("")).toBeUndefined();
   });
 });
 
