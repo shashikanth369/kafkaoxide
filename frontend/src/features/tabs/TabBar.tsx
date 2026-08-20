@@ -19,6 +19,7 @@ export function TabBar() {
   const commitTabOrder = useTabsStore((s) => s.commitTabOrder);
   const jsonTabs = useJsonViewerTabsStore((s) => s.tabs);
   const closeJsonTab = useJsonViewerTabsStore((s) => s.closeTab);
+  const renameJsonTab = useJsonViewerTabsStore((s) => s.renameTab);
   const anchors = useTabOrderStore((s) => s.anchors);
   const clearAnchor = useTabOrderStore((s) => s.clearAnchor);
   const settingsOpen = useSettingsPanelStore((s) => s.isOpen);
@@ -94,7 +95,12 @@ export function TabBar() {
 
   function commitEditing() {
     if (editingId && draftName.trim().length > 0) {
-      renameTab(editingId, draftName.trim());
+      const trimmed = draftName.trim();
+      if (tabs.some((t) => t.id === editingId)) {
+        renameTab(editingId, trimmed);
+      } else {
+        renameJsonTab(editingId, trimmed);
+      }
     }
     setEditingId(null);
   }
@@ -229,20 +235,41 @@ export function TabBar() {
               tabIndex={0}
               className="tab"
               onClick={() => handleTabClick(jsonTab.id)}
+              onDoubleClick={() => startEditing(jsonTab.id, jsonTab.name)}
+              onContextMenu={(e) => {
+                e.preventDefault();
+                startEditing(jsonTab.id, jsonTab.name);
+              }}
               onKeyDown={(e) => handleTabKeyDown(e, jsonTab.id)}
             >
-              <span>Json</span>
-              <button
-                type="button"
-                className="tab-close"
-                aria-label={`Close tab ${jsonTab.title}`}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  requestCloseJsonTab(jsonTab.id);
-                }}
-              >
-                ×
-              </button>
+              {editingId === jsonTab.id ? (
+                <input
+                  autoFocus
+                  value={draftName}
+                  aria-label={`Rename tab ${jsonTab.name}`}
+                  onChange={(e) => setDraftName(e.target.value)}
+                  onBlur={commitEditing}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") commitEditing();
+                    if (e.key === "Escape") setEditingId(null);
+                  }}
+                />
+              ) : (
+                <>
+                  <span>{jsonTab.name}</span>
+                  <button
+                    type="button"
+                    className="tab-close"
+                    aria-label={`Close tab ${jsonTab.title}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      requestCloseJsonTab(jsonTab.id);
+                    }}
+                  >
+                    ×
+                  </button>
+                </>
+              )}
             </div>
           );
         })}

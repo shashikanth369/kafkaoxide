@@ -338,6 +338,18 @@ describe("TabBar", () => {
       expect(jsonTab).not.toHaveTextContent("Partition 0 · Offset 1");
     });
 
+    it("labels an XML viewer tab 'Xml' in the strip", () => {
+      useTabsStore.setState({
+        tabs: [{ id: "1", name: "Alpha", position: 0 }],
+        activeTabId: "1",
+      });
+      useJsonViewerTabsStore.getState().openTab("Partition 0 · Offset 1", "<a/>", "xml");
+      render(<TabBar />);
+
+      const xmlTab = screen.getByRole("tab", { name: "Partition 0 · Offset 1" });
+      expect(xmlTab).toHaveTextContent("Xml");
+    });
+
     it("puts a new tab (from the + button) to the right of the JSON tab that was active when it was created", async () => {
       useTabsStore.setState({
         tabs: [{ id: "1", name: "Alpha", position: 0 }],
@@ -394,6 +406,41 @@ describe("TabBar", () => {
 
       expect(useJsonViewerTabsStore.getState().tabs).toHaveLength(0);
       expect(useTabsStore.getState().activeTabId).toBe("2");
+    });
+
+    it("renames a JSON viewer tab's strip label via double-click, edit, and Enter, leaving its title unchanged", async () => {
+      useTabsStore.setState({
+        tabs: [{ id: "1", name: "Alpha", position: 0 }],
+        activeTabId: "1",
+      });
+      useJsonViewerTabsStore.getState().openTab("Partition 0 · Offset 1", { a: 1 });
+      const user = userEvent.setup();
+      render(<TabBar />);
+
+      await user.dblClick(screen.getByText("Json"));
+      const input = screen.getByLabelText("Rename tab Json");
+      await user.clear(input);
+      await user.type(input, "My scratch view{Enter}");
+
+      await waitFor(() => {
+        expect(useJsonViewerTabsStore.getState().tabs[0].name).toBe("My scratch view");
+      });
+      expect(useJsonViewerTabsStore.getState().tabs[0].title).toBe("Partition 0 · Offset 1");
+      expect(screen.getByRole("tab", { name: "Partition 0 · Offset 1" })).toHaveTextContent("My scratch view");
+      expect(useTabsStore.getState().tabs).toHaveLength(1);
+    });
+
+    it("opens rename editing for a JSON viewer tab via right-click", () => {
+      useTabsStore.setState({
+        tabs: [{ id: "1", name: "Alpha", position: 0 }],
+        activeTabId: "1",
+      });
+      useJsonViewerTabsStore.getState().openTab("Partition 0 · Offset 1", { a: 1 });
+      render(<TabBar />);
+
+      fireEvent.contextMenu(screen.getByText("Json"));
+
+      expect(screen.getByLabelText("Rename tab Json")).toBeInTheDocument();
     });
   });
 
