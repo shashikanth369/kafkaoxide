@@ -96,6 +96,7 @@ pub async fn connection_delete(
     id: String,
 ) -> Result<(), CommandError> {
     kafkaoxide_db::connections::delete(&state.pool, &id).await?;
+    kafkaoxide_db::topic_schemas::delete_all_for_connection(&state.pool, &id).await?;
     for key in SECRET_KEYS {
         state.secrets.delete_secret(&id, key)?;
     }
