@@ -10,6 +10,7 @@ use tauri::Manager;
 
 fn main() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             let handle = app.handle().clone();
             tauri::async_runtime::block_on(async move {
@@ -38,6 +39,8 @@ fn main() {
             commands::connections::connection_create,
             commands::connections::connection_update,
             commands::connections::connection_delete,
+            commands::connections::connections_export,
+            commands::connections::connections_import,
             commands::connections::connection_check_status,
             commands::connections::connection_ping_bootstrap,
             commands::connections::connection_ping_zookeeper,

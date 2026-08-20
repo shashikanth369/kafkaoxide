@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
+import { open, save } from "@tauri-apps/plugin-dialog";
 import { ThemeProvider } from "./features/theme/ThemeProvider";
 import { TabBar } from "./features/tabs/TabBar";
 import { useTabsStore } from "./features/tabs/useTabsStore";
@@ -15,7 +16,7 @@ import { TopicDetailPanel } from "./features/connections/TopicDetailPanel";
 import { PartitionDetailPanel } from "./features/connections/PartitionDetailPanel";
 import { MessagePayloadViewer } from "./features/connections/MessagePayloadViewer";
 import { ConsumerGroupDetailPanel } from "./features/connections/ConsumerGroupDetailPanel";
-import { useCreateConnection } from "./features/connections/useConnections";
+import { useCreateConnection, useExportConnections, useImportConnections } from "./features/connections/useConnections";
 import { BottomPanel } from "./features/bottom-panel/BottomPanel";
 import { ResizableShell } from "./features/layout/ResizableShell";
 import { useWorkspaceSelectionStore } from "./features/workspace/useWorkspaceSelectionStore";
@@ -32,6 +33,8 @@ function AppShell() {
   const [showModal, setShowModal] = useState(false);
   const [cloneDraft, setCloneDraft] = useState<ConnectionDraft | null>(null);
   const createConnection = useCreateConnection();
+  const exportConnections = useExportConnections();
+  const importConnections = useImportConnections();
 
   function handleClone(connection: Connection) {
     setCloneDraft({ ...connectionToDraft(connection), name: `${connection.name} (Copy)` });
@@ -41,6 +44,24 @@ function AppShell() {
   function closeModal() {
     setShowModal(false);
     setCloneDraft(null);
+  }
+
+  async function handleExportAll() {
+    const path = await save({
+      defaultPath: "kafkaoxide-connections.json",
+      filters: [{ name: "JSON", extensions: ["json"] }],
+    });
+    if (path) {
+      exportConnections.mutate({ ids: null, path });
+    }
+  }
+
+  async function handleImport() {
+    const path = await open({ filters: [{ name: "JSON", extensions: ["json"] }], multiple: false });
+    if (path) {
+      const { imported, skipped } = await importConnections.mutateAsync(path);
+      window.alert(`Imported ${imported} connection${imported === 1 ? "" : "s"}, skipped ${skipped}.`);
+    }
   }
   const loadTabs = useTabsStore((s) => s.loadTabs);
   const activeTabId = useTabsStore((s) => s.activeTabId);
@@ -76,9 +97,17 @@ function AppShell() {
         <ResizableShell
           left={
             <aside className="app-sidebar">
-              <button type="button" onClick={() => setShowModal(true)}>
-                + Add Cluster
-              </button>
+              <div className="app-sidebar-actions">
+                <button type="button" onClick={() => setShowModal(true)}>
+                  + Add Cluster
+                </button>
+                <button type="button" onClick={handleExportAll}>
+                  Export All
+                </button>
+                <button type="button" onClick={handleImport}>
+                  Import
+                </button>
+              </div>
               {showModal && (
                 <ConnectionModal
                   initialDraft={cloneDraft ?? undefined}

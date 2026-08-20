@@ -7,6 +7,12 @@ import { useTabsStore } from "./features/tabs/useTabsStore";
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
 vi.mock("@tauri-apps/api/event", () => ({ listen: vi.fn(() => Promise.resolve(() => {})) }));
+const save = vi.fn();
+const open = vi.fn();
+vi.mock("@tauri-apps/plugin-dialog", () => ({
+  save: (...args: unknown[]) => save(...args),
+  open: (...args: unknown[]) => open(...args),
+}));
 
 describe("App", () => {
   it("renders the shell with tab bar, sidebar, and bottom panel", async () => {
@@ -41,6 +47,97 @@ describe("App", () => {
     await user.click(screen.getByRole("button", { name: "+ Add Cluster" }));
 
     expect(screen.getByRole("dialog", { name: "New Connection" })).toBeInTheDocument();
+  });
+
+  it("exports every connection when Export All is clicked", async () => {
+    const { invoke } = await import("@tauri-apps/api/core");
+    vi.mocked(invoke).mockImplementation((command: string) => {
+      if (command === "tab_list") return Promise.resolve([]);
+      if (command === "connection_list") return Promise.resolve([]);
+      if (command === "connections_export") return Promise.resolve(undefined);
+      return Promise.reject(new Error(`unexpected command ${command}`));
+    });
+    save.mockResolvedValue("/tmp/kafkaoxide-connections.json");
+    const user = userEvent.setup();
+
+    render(<App />);
+    await screen.findByText("No connections yet. Add one to get started.");
+
+    await user.click(screen.getByRole("button", { name: "Export All" }));
+
+    expect(save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        defaultPath: "kafkaoxide-connections.json",
+        filters: [{ name: "JSON", extensions: ["json"] }],
+      }),
+    );
+    await waitFor(() =>
+      expect(invoke).toHaveBeenCalledWith("connections_export", {
+        ids: null,
+        path: "/tmp/kafkaoxide-connections.json",
+      }),
+    );
+  });
+
+  it("does not export when the Export All save dialog is cancelled", async () => {
+    const { invoke } = await import("@tauri-apps/api/core");
+    vi.mocked(invoke).mockImplementation((command: string) => {
+      if (command === "tab_list") return Promise.resolve([]);
+      if (command === "connection_list") return Promise.resolve([]);
+      return Promise.reject(new Error(`unexpected command ${command}`));
+    });
+    save.mockResolvedValue(null);
+    const user = userEvent.setup();
+
+    render(<App />);
+    await screen.findByText("No connections yet. Add one to get started.");
+    vi.mocked(invoke).mockClear();
+
+    await user.click(screen.getByRole("button", { name: "Export All" }));
+
+    expect(invoke).not.toHaveBeenCalledWith("connections_export", expect.anything());
+  });
+
+  it("imports connections and shows a summary alert when Import is clicked", async () => {
+    const { invoke } = await import("@tauri-apps/api/core");
+    vi.mocked(invoke).mockImplementation((command: string) => {
+      if (command === "tab_list") return Promise.resolve([]);
+      if (command === "connection_list") return Promise.resolve([]);
+      if (command === "connections_import") return Promise.resolve({ imported: 2, skipped: 1 });
+      return Promise.reject(new Error(`unexpected command ${command}`));
+    });
+    open.mockResolvedValue("/tmp/kafkaoxide-connections.json");
+    const alertSpy = vi.spyOn(window, "alert").mockImplementation(() => {});
+    const user = userEvent.setup();
+
+    render(<App />);
+    await screen.findByText("No connections yet. Add one to get started.");
+
+    await user.click(screen.getByRole("button", { name: "Import" }));
+
+    expect(open).toHaveBeenCalledWith(
+      expect.objectContaining({ filters: [{ name: "JSON", extensions: ["json"] }], multiple: false }),
+    );
+    await waitFor(() => expect(alertSpy).toHaveBeenCalledWith(expect.stringMatching(/imported 2.*skipped 1/i)));
+  });
+
+  it("does not import when the Import open dialog is cancelled", async () => {
+    const { invoke } = await import("@tauri-apps/api/core");
+    vi.mocked(invoke).mockImplementation((command: string) => {
+      if (command === "tab_list") return Promise.resolve([]);
+      if (command === "connection_list") return Promise.resolve([]);
+      return Promise.reject(new Error(`unexpected command ${command}`));
+    });
+    open.mockResolvedValue(null);
+    const user = userEvent.setup();
+
+    render(<App />);
+    await screen.findByText("No connections yet. Add one to get started.");
+    vi.mocked(invoke).mockClear();
+
+    await user.click(screen.getByRole("button", { name: "Import" }));
+
+    expect(invoke).not.toHaveBeenCalledWith("connections_import", expect.anything());
   });
 
   it("opens the Settings panel via the gear icon and shows a closable Settings tab", async () => {

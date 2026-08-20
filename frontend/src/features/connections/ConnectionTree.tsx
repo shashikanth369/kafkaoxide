@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useIsMutating } from "@tanstack/react-query";
+import { save } from "@tauri-apps/plugin-dialog";
 import { ContextMenu } from "../../components/ContextMenu";
 import { Connection, ConnectionStatus } from "../../lib/tauri";
 import {
@@ -10,6 +11,7 @@ import {
   useConnectionStatus,
   useDeleteConnection,
   useDisconnect,
+  useExportConnections,
 } from "./useConnections";
 import { useWorkspaceSelectionStore } from "../workspace/useWorkspaceSelectionStore";
 import { ClusterResourceTree } from "./ClusterResourceTree";
@@ -47,10 +49,21 @@ function ConnectionRow({ connection, onClone }: ConnectionRowProps) {
   const connect = useConnect(id);
   const disconnect = useDisconnect();
   const deleteConnection = useDeleteConnection();
+  const exportConnections = useExportConnections();
 
   function handleDelete() {
     if (window.confirm(`Delete connection "${name}"? This cannot be undone.`)) {
       deleteConnection.mutate(id);
+    }
+  }
+
+  async function handleExport() {
+    const path = await save({
+      defaultPath: `${name}.json`,
+      filters: [{ name: "JSON", extensions: ["json"] }],
+    });
+    if (path) {
+      exportConnections.mutate({ ids: [id], path });
     }
   }
 
@@ -91,6 +104,7 @@ function ConnectionRow({ connection, onClone }: ConnectionRowProps) {
             { label: "Reconnect", onSelect: () => connect.mutate() },
             { label: "Disconnect", onSelect: () => disconnect.mutate(id) },
             { label: "Clone Connection", onSelect: () => onClone(connection) },
+            { label: "Export Connection", onSelect: handleExport },
             { label: "Delete Connection", destructive: true, onSelect: handleDelete },
           ]}
         />

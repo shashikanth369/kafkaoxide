@@ -42,7 +42,10 @@ body {
   overflow-y: auto;
   padding: 8px;
 }
-.app-sidebar > button {
+.app-sidebar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
   margin-bottom: 10px;
 }
 

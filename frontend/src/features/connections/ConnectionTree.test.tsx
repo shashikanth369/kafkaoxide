@@ -8,6 +8,8 @@ import { connectMutationKey } from "./useConnections";
 import { useWorkspaceSelectionStore } from "../workspace/useWorkspaceSelectionStore";
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
+const save = vi.fn();
+vi.mock("@tauri-apps/plugin-dialog", () => ({ save: (...args: unknown[]) => save(...args) }));
 
 function renderWithClient(ui: React.ReactElement) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -266,12 +268,13 @@ describe("ConnectionTree", () => {
       return user;
     }
 
-    it("shows Reconnect, Disconnect, Clone Connection, and Delete Connection", async () => {
+    it("shows Reconnect, Disconnect, Clone Connection, Export Connection, and Delete Connection", async () => {
       await openMenu();
 
       expect(screen.getByRole("menuitem", { name: "Reconnect" })).toBeInTheDocument();
       expect(screen.getByRole("menuitem", { name: "Disconnect" })).toBeInTheDocument();
       expect(screen.getByRole("menuitem", { name: "Clone Connection" })).toBeInTheDocument();
+      expect(screen.getByRole("menuitem", { name: "Export Connection" })).toBeInTheDocument();
       expect(screen.getByRole("menuitem", { name: "Delete Connection" })).toBeInTheDocument();
     });
 
@@ -320,6 +323,41 @@ describe("ConnectionTree", () => {
       await user.click(screen.getByRole("menuitem", { name: "Clone Connection" }));
 
       expect(onClone).toHaveBeenCalledWith(expect.objectContaining({ id: "1", name: "Local Kafka" }));
+    });
+
+    it("shows a save dialog defaulting to the connection's name and exports it when Export Connection is clicked", async () => {
+      const exportFn = vi.fn();
+      setInvokeHandlers({
+        connection_list: () => [sampleConnection()],
+        connection_check_status: () => "UNKNOWN",
+        connection_is_connected: () => false,
+        connections_export: exportFn,
+      });
+      save.mockResolvedValue("/tmp/Local Kafka.json");
+      const user = await openMenu();
+
+      await user.click(screen.getByRole("menuitem", { name: "Export Connection" }));
+
+      expect(save).toHaveBeenCalledWith(
+        expect.objectContaining({ defaultPath: "Local Kafka.json", filters: [{ name: "JSON", extensions: ["json"] }] }),
+      );
+      await waitFor(() => expect(exportFn).toHaveBeenCalledWith({ ids: ["1"], path: "/tmp/Local Kafka.json" }));
+    });
+
+    it("does not export when the save dialog is cancelled", async () => {
+      const exportFn = vi.fn();
+      setInvokeHandlers({
+        connection_list: () => [sampleConnection()],
+        connection_check_status: () => "UNKNOWN",
+        connection_is_connected: () => false,
+        connections_export: exportFn,
+      });
+      save.mockResolvedValue(null);
+      const user = await openMenu();
+
+      await user.click(screen.getByRole("menuitem", { name: "Export Connection" }));
+
+      expect(exportFn).not.toHaveBeenCalled();
     });
 
     it("asks for confirmation and calls connection_delete when Delete Connection is confirmed", async () => {

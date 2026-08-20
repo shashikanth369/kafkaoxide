@@ -1,6 +1,11 @@
 use crate::state::AppState;
-use kafkaoxide_core::{Connection, ConnectionStatus, NewConnection};
+use error_stack::ResultExt;
+use kafkaoxide_core::{
+    partition_importable, select_for_export, AppError, Connection, ConnectionExportFile, ConnectionStatus,
+    NewConnection,
+};
 use kafkaoxide_kafka::BrokerSslConfig;
+use std::collections::HashSet;
 use tauri::{AppHandle, State};
 
 #[derive(serde::Serialize)]
@@ -120,6 +125,62 @@ pub async fn connection_delete(
     state.connections.mark_disconnected(&id);
     crate::logging::emit_log(&app, "info", format!("Deleted connection {id}"));
     Ok(())
+}
+
+#[derive(serde::Serialize)]
+pub struct ImportSummary {
+    pub imported: usize,
+    pub skipped: usize,
+}
+
+/// Backs the sidebar's per-connection "Export Connection" context-menu item
+/// (`ids: Some([id])`) and its "Export All" button (`ids: None`). `path` is
+/// resolved by the frontend beforehand via the native save dialog — this
+/// command only builds the file contents and writes them. Never includes
+/// credentials: `select_for_export` only ever produces `PortableConnection`s,
+/// which have no secret fields to begin with.
+#[tauri::command]
+pub async fn connections_export(
+    state: State<'_, AppState>,
+    ids: Option<Vec<String>>,
+    path: String,
+) -> Result<(), CommandError> {
+    let all = kafkaoxide_db::connections::list(&state.pool).await?;
+    let portable = select_for_export(&all, ids.as_deref());
+    let file = ConnectionExportFile::new(portable);
+    let json = file
+        .to_json_pretty()
+        .change_context(AppError::Validation)
+        .attach_printable("failed to serialize the connections export file")?;
+    std::fs::write(&path, json)
+        .change_context(AppError::Validation)
+        .attach_printable("failed to write the connections export file")?;
+    Ok(())
+}
+
+/// Backs the sidebar's "Import" button. `path` is resolved by the frontend
+/// via the native open dialog. Connections whose name matches an existing
+/// one are left untouched (see `partition_importable`'s doc comment) rather
+/// than overwritten or duplicated; imported connections always land with
+/// empty credential fields, same as any other freshly created connection.
+#[tauri::command]
+pub async fn connections_import(state: State<'_, AppState>, path: String) -> Result<ImportSummary, CommandError> {
+    let text = std::fs::read_to_string(&path)
+        .change_context(AppError::Validation)
+        .attach_printable("failed to read the connections export file")?;
+    let file = ConnectionExportFile::parse(&text)?;
+
+    let existing = kafkaoxide_db::connections::list(&state.pool).await?;
+    let existing_names: HashSet<String> = existing.into_iter().map(|connection| connection.name).collect();
+    let (importable, skipped) = partition_importable(&file.connections, &existing_names);
+    let imported = importable.len();
+
+    for portable in importable {
+        let new_connection: NewConnection = portable.clone().into();
+        kafkaoxide_db::connections::create(&state.pool, &new_connection).await?;
+    }
+
+    Ok(ImportSummary { imported, skipped })
 }
 
 #[tauri::command]

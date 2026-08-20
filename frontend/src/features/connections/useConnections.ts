@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api, ConnectionStatus, NewConnection } from "../../lib/tauri";
+import { api, ConnectionStatus, ImportSummary, NewConnection } from "../../lib/tauri";
 
 export function useConnectionsQuery() {
   return useQuery({ queryKey: ["connections"], queryFn: api.listConnections });
@@ -26,6 +26,22 @@ export function useDeleteConnection() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => api.deleteConnection(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["connections"] }),
+  });
+}
+
+/** Backs the "Export Connection" context-menu item (`ids: [id]`) and the "Export All" button (`ids: null`). */
+export function useExportConnections() {
+  return useMutation<void, Error, { ids: string[] | null; path: string }>({
+    mutationFn: ({ ids, path }) => api.exportConnections(ids, path),
+  });
+}
+
+/** Backs the sidebar's "Import" button. */
+export function useImportConnections() {
+  const queryClient = useQueryClient();
+  return useMutation<ImportSummary, Error, string>({
+    mutationFn: (path: string) => api.importConnections(path),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["connections"] }),
   });
 }

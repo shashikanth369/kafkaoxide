@@ -158,6 +158,11 @@ export interface TopicMessage {
   headers: MessageHeader[];
 }
 
+export interface ImportSummary {
+  imported: number;
+  skipped: number;
+}
+
 export const api = {
   listConnections: () => invoke<Connection[]>("connection_list"),
   createConnection: (newConnection: NewConnection) =>
@@ -165,6 +170,10 @@ export const api = {
   updateConnection: (id: string, newConnection: NewConnection) =>
     invoke<Connection>("connection_update", { id, newConnection }),
   deleteConnection: (id: string) => invoke<void>("connection_delete", { id }),
+  /** `ids: null` exports every connection; a specific list exports just those. */
+  exportConnections: (ids: string[] | null, path: string) =>
+    invoke<void>("connections_export", { ids, path }),
+  importConnections: (path: string) => invoke<ImportSummary>("connections_import", { path }),
   checkConnectionStatus: (id: string) =>
     invoke<ConnectionStatus>("connection_check_status", { id }),
   pingBootstrapServers: (bootstrapServers: string) =>

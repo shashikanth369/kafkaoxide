@@ -3,7 +3,15 @@ import { renderHook, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { setInvokeHandlers } from "../../lib/testInvoke";
-import { useConnect, useConnectionConnected, useDisconnect, useUpdateConnection } from "./useConnections";
+import {
+  useConnect,
+  useConnectionConnected,
+  useConnectionsQuery,
+  useDisconnect,
+  useExportConnections,
+  useImportConnections,
+  useUpdateConnection,
+} from "./useConnections";
 import { sampleNewConnection } from "./connectionTestFixtures";
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
@@ -76,5 +84,62 @@ describe("useDisconnect", () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(connectionDisconnect).toHaveBeenCalledWith({ id: "1" });
+  });
+});
+
+describe("useExportConnections", () => {
+  it("calls connections_export with the given ids and path", async () => {
+    const connectionsExport = vi.fn(() => undefined);
+    setInvokeHandlers({ connections_export: connectionsExport });
+
+    const { result } = renderHook(() => useExportConnections(), { wrapper: createWrapper() });
+    result.current.mutate({ ids: ["1"], path: "/tmp/export.json" });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(connectionsExport).toHaveBeenCalledWith({ ids: ["1"], path: "/tmp/export.json" });
+  });
+
+  it("passes null ids through for an export-all", async () => {
+    const connectionsExport = vi.fn(() => undefined);
+    setInvokeHandlers({ connections_export: connectionsExport });
+
+    const { result } = renderHook(() => useExportConnections(), { wrapper: createWrapper() });
+    result.current.mutate({ ids: null, path: "/tmp/all.json" });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(connectionsExport).toHaveBeenCalledWith({ ids: null, path: "/tmp/all.json" });
+  });
+});
+
+describe("useImportConnections", () => {
+  it("calls connections_import with the path and returns the summary", async () => {
+    const connectionsImport = vi.fn(() => ({ imported: 2, skipped: 1 }));
+    setInvokeHandlers({ connections_import: connectionsImport });
+
+    const { result } = renderHook(() => useImportConnections(), { wrapper: createWrapper() });
+    result.current.mutate("/tmp/import.json");
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(connectionsImport).toHaveBeenCalledWith({ path: "/tmp/import.json" });
+    expect(result.current.data).toEqual({ imported: 2, skipped: 1 });
+  });
+
+  it("invalidates the connections list on success", async () => {
+    const connectionList = vi.fn(() => []);
+    setInvokeHandlers({ connection_list: connectionList, connections_import: () => ({ imported: 1, skipped: 0 }) });
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    );
+
+    const { result: listResult } = renderHook(() => useConnectionsQuery(), { wrapper });
+    await waitFor(() => expect(listResult.current.isSuccess).toBe(true));
+    expect(connectionList).toHaveBeenCalledTimes(1);
+
+    const { result: importResult } = renderHook(() => useImportConnections(), { wrapper });
+    importResult.current.mutate("/tmp/import.json");
+    await waitFor(() => expect(importResult.current.isSuccess).toBe(true));
+
+    await waitFor(() => expect(connectionList).toHaveBeenCalledTimes(2));
   });
 });
