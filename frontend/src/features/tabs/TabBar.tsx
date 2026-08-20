@@ -3,6 +3,9 @@ import { useTabsStore } from "./useTabsStore";
 import { useJsonViewerTabsStore } from "./useJsonViewerTabsStore";
 import { mergeTabOrder, useTabOrderStore } from "./useTabOrderStore";
 import { useSettingsPanelStore } from "../settings/useSettingsPanelStore";
+import { closeAppWindow } from "../../lib/appWindow";
+
+type PendingClose = { kind: "tab" | "json"; id: string };
 
 export function TabBar() {
   const tabs = useTabsStore((s) => s.tabs);
@@ -23,6 +26,7 @@ export function TabBar() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draftName, setDraftName] = useState("");
   const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [pendingClose, setPendingClose] = useState<PendingClose | null>(null);
   const tabRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const didReorderRef = useRef(false);
 
@@ -123,6 +127,38 @@ export function TabBar() {
     ...jsonTabs.map((t) => t.id),
   ];
   const order = mergeTabOrder(rootOrder, anchoredIds, anchors, liveIds);
+  const isLastTab = order.length === 1;
+
+  // Closing the app's very last tab (workspace or JSON/XML viewer) leaves
+  // nothing to show — rather than silently deleting it and then requiring a
+  // separate close action, ask for confirmation and close the app's window
+  // right here once confirmed.
+  function requestCloseTab(id: string) {
+    if (isLastTab) {
+      setPendingClose({ kind: "tab", id });
+    } else {
+      deleteTab(id);
+    }
+  }
+
+  function requestCloseJsonTab(id: string) {
+    if (isLastTab) {
+      setPendingClose({ kind: "json", id });
+    } else {
+      handleCloseJsonTab(id);
+    }
+  }
+
+  async function confirmCloseLastTab() {
+    if (!pendingClose) return;
+    if (pendingClose.kind === "tab") {
+      await deleteTab(pendingClose.id);
+    } else {
+      handleCloseJsonTab(pendingClose.id);
+    }
+    setPendingClose(null);
+    await closeAppWindow();
+  }
 
   return (
     <div className="tab-bar-region">
@@ -171,7 +207,7 @@ export function TabBar() {
                       aria-label={`Close tab ${tab.name}`}
                       onClick={(e) => {
                         e.stopPropagation();
-                        deleteTab(tab.id);
+                        requestCloseTab(tab.id);
                       }}
                     >
                       ×
@@ -202,7 +238,7 @@ export function TabBar() {
                 aria-label={`Close tab ${jsonTab.title}`}
                 onClick={(e) => {
                   e.stopPropagation();
-                  handleCloseJsonTab(jsonTab.id);
+                  requestCloseJsonTab(jsonTab.id);
                 }}
               >
                 ×
@@ -234,6 +270,30 @@ export function TabBar() {
         <p role="alert" className="tab-bar-error">
           {error}
         </p>
+      )}
+      {pendingClose && (
+        <div className="connection-modal-overlay" onClick={() => setPendingClose(null)}>
+          <div
+            className="connection-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Close application"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <header className="connection-modal-header">
+              <h2>Close application?</h2>
+            </header>
+            <p>This is the last open tab — closing it will close kafkaoxide.</p>
+            <footer className="connection-modal-footer">
+              <button type="button" onClick={confirmCloseLastTab}>
+                Close application
+              </button>
+              <button type="button" onClick={() => setPendingClose(null)}>
+                Cancel
+              </button>
+            </footer>
+          </div>
+        </div>
       )}
     </div>
   );

@@ -7,9 +7,11 @@ import { useTabsStore } from "./useTabsStore";
 import { useJsonViewerTabsStore } from "./useJsonViewerTabsStore";
 import { useTabOrderStore } from "./useTabOrderStore";
 import { useSettingsPanelStore } from "../settings/useSettingsPanelStore";
+import { closeAppWindow } from "../../lib/appWindow";
 import { TabBar } from "./TabBar";
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
+vi.mock("../../lib/appWindow", () => ({ closeAppWindow: vi.fn() }));
 
 function pointerEventAt(type: string, clientX: number): Event {
   const event = new Event(type, { bubbles: true });
@@ -23,6 +25,7 @@ beforeEach(() => {
   useJsonViewerTabsStore.setState({ tabs: [] });
   useTabOrderStore.setState({ anchors: {} });
   useSettingsPanelStore.setState({ isOpen: false });
+  vi.mocked(closeAppWindow).mockClear();
 });
 
 describe("TabBar", () => {
@@ -391,6 +394,90 @@ describe("TabBar", () => {
 
       expect(useJsonViewerTabsStore.getState().tabs).toHaveLength(0);
       expect(useTabsStore.getState().activeTabId).toBe("2");
+    });
+  });
+
+  describe("closing the last remaining tab", () => {
+    it("asks for confirmation instead of closing immediately, when it's the only tab", async () => {
+      useTabsStore.setState({
+        tabs: [{ id: "1", name: "Alpha", position: 0 }],
+        activeTabId: "1",
+      });
+      const user = userEvent.setup();
+      render(<TabBar />);
+
+      await user.click(screen.getByLabelText("Close tab Alpha"));
+
+      expect(screen.getByRole("dialog", { name: "Close application" })).toBeInTheDocument();
+      expect(useTabsStore.getState().tabs).toHaveLength(1);
+      expect(closeAppWindow).not.toHaveBeenCalled();
+    });
+
+    it("deletes the tab and closes the app window when confirmed", async () => {
+      setInvokeHandlers({ tab_delete: () => undefined });
+      useTabsStore.setState({
+        tabs: [{ id: "1", name: "Alpha", position: 0 }],
+        activeTabId: "1",
+      });
+      const user = userEvent.setup();
+      render(<TabBar />);
+
+      await user.click(screen.getByLabelText("Close tab Alpha"));
+      await user.click(screen.getByRole("button", { name: "Close application" }));
+
+      await waitFor(() => expect(useTabsStore.getState().tabs).toHaveLength(0));
+      expect(closeAppWindow).toHaveBeenCalledTimes(1);
+    });
+
+    it("leaves the tab open and does not close the app when cancelled", async () => {
+      useTabsStore.setState({
+        tabs: [{ id: "1", name: "Alpha", position: 0 }],
+        activeTabId: "1",
+      });
+      const user = userEvent.setup();
+      render(<TabBar />);
+
+      await user.click(screen.getByLabelText("Close tab Alpha"));
+      await user.click(screen.getByRole("button", { name: "Cancel" }));
+
+      expect(screen.queryByRole("dialog", { name: "Close application" })).not.toBeInTheDocument();
+      expect(useTabsStore.getState().tabs).toHaveLength(1);
+      expect(closeAppWindow).not.toHaveBeenCalled();
+    });
+
+    it("does not ask for confirmation when other tabs remain", async () => {
+      setInvokeHandlers({ tab_delete: () => undefined });
+      useTabsStore.setState({
+        tabs: [
+          { id: "1", name: "Alpha", position: 0 },
+          { id: "2", name: "Beta", position: 1 },
+        ],
+        activeTabId: "1",
+      });
+      const user = userEvent.setup();
+      render(<TabBar />);
+
+      await user.click(screen.getByLabelText("Close tab Beta"));
+
+      expect(screen.queryByRole("dialog", { name: "Close application" })).not.toBeInTheDocument();
+      await waitFor(() => expect(useTabsStore.getState().tabs).toHaveLength(1));
+      expect(closeAppWindow).not.toHaveBeenCalled();
+    });
+
+    it("asks for confirmation when closing the only tab and it's a JSON viewer tab", async () => {
+      useTabsStore.setState({ tabs: [], activeTabId: null });
+      const jsonId = useJsonViewerTabsStore.getState().openTab("Partition 0 · Offset 1", { a: 1 });
+      useTabsStore.setState({ activeTabId: jsonId });
+      const user = userEvent.setup();
+      render(<TabBar />);
+
+      await user.click(screen.getByLabelText("Close tab Partition 0 · Offset 1"));
+      expect(screen.getByRole("dialog", { name: "Close application" })).toBeInTheDocument();
+
+      await user.click(screen.getByRole("button", { name: "Close application" }));
+
+      expect(useJsonViewerTabsStore.getState().tabs).toHaveLength(0);
+      expect(closeAppWindow).toHaveBeenCalledTimes(1);
     });
   });
 });
