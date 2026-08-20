@@ -38,7 +38,10 @@ mod tests {
         assert_eq!(AppError::Db.to_string(), "database error");
         assert_eq!(AppError::NotFound.to_string(), "not found");
         assert_eq!(AppError::Zookeeper.to_string(), "zookeeper error");
-        assert_eq!(AppError::SchemaRegistry.to_string(), "schema registry error");
+        assert_eq!(
+            AppError::SchemaRegistry.to_string(),
+            "schema registry error"
+        );
         assert_eq!(AppError::Decode.to_string(), "payload decode error");
     }
 }
