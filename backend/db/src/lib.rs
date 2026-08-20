@@ -1,5 +1,6 @@
 pub mod connections;
 pub mod tabs;
+pub mod topic_schemas;
 
 use error_stack::{Result, ResultExt};
 use kafkaoxide_core::AppError;
