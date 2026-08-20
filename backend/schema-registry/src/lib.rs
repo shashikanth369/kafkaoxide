@@ -54,10 +54,17 @@ impl SchemaRegistryClient {
             .change_context(AppError::SchemaRegistry)
             .attach_printable("failed to build Schema Registry HTTP client")?;
 
-        let basic_auth = auth
-            .basic_auth_credentials
-            .and_then(|creds| creds.split_once(':'))
-            .map(|(user, pass)| (user.to_string(), pass.to_string()));
+        let basic_auth = match auth.basic_auth_credentials {
+            Some(creds) => {
+                let (user, pass) = creds.split_once(':').ok_or_else(|| {
+                    Report::new(AppError::SchemaRegistry).attach_printable(
+                        "schema registry basic auth credentials must be in \"username:password\" format",
+                    )
+                })?;
+                Some((user.to_string(), pass.to_string()))
+            }
+            None => None,
+        };
 
         Ok(SchemaRegistryClient {
             http,
@@ -90,7 +97,7 @@ impl SchemaRegistryClient {
             .attach_printable_lazy(|| format!("request to {url} failed"))?;
 
         if response.status() == reqwest::StatusCode::NOT_FOUND {
-            return Err(Report::new(AppError::SchemaRegistry))
+            return Err(Report::new(AppError::NotFound))
                 .attach_printable_lazy(|| format!("schema id {id} not found in registry"));
         }
 
@@ -149,6 +156,18 @@ mod tests {
             request
         });
         (format!("http://{addr}"), handle)
+    }
+
+    #[test]
+    fn rejects_malformed_basic_auth_credentials() {
+        let auth = SchemaRegistryAuth {
+            basic_auth_credentials: Some("not-user-colon-pass"),
+            ..Default::default()
+        };
+
+        let result = SchemaRegistryClient::new("http://localhost:1", auth);
+
+        assert!(result.is_err());
     }
 
     #[tokio::test]
