@@ -1,12 +1,13 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { JsonTreeView } from "../../components/JsonTreeView";
+import { useDecodeAvro } from "./useClusterResources";
 import { useJsonViewerTabsStore } from "../tabs/useJsonViewerTabsStore";
 import { useTabsStore } from "../tabs/useTabsStore";
 import { useMessageViewerStore } from "../workspace/useMessageViewerStore";
-import { base64ToBytes, bytesToText, detectConfluentAvro, tryParseJson } from "./payloadDecoding";
+import { base64ToBytes, bytesToText, tryParseJson } from "./payloadDecoding";
 
 type PanelTabId = "headers" | "value";
-type ValueMode = "text" | "json";
+type ValueMode = "text" | "json" | "avro";
 
 const PANEL_TABS: { id: PanelTabId; label: string }[] = [
   { id: "headers", label: "Headers" },
@@ -15,10 +16,24 @@ const PANEL_TABS: { id: PanelTabId; label: string }[] = [
 
 export function MessagePayloadViewer() {
   const message = useMessageViewerStore((s) => s.message);
+  const connectionId = useMessageViewerStore((s) => s.connectionId);
+  const topic = useMessageViewerStore((s) => s.topic);
   const openJsonTab = useJsonViewerTabsStore((s) => s.openTab);
   const selectTab = useTabsStore((s) => s.selectTab);
   const [activeTab, setActiveTab] = useState<PanelTabId>("value");
   const [mode, setMode] = useState<ValueMode>("text");
+  const decodeAvro = useDecodeAvro();
+  const { mutate: runDecodeAvro } = decodeAvro;
+  const payloadBase64 = message?.payloadBase64 ?? null;
+
+  // Re-decodes whenever a different message is viewed while Avro mode is
+  // already active (e.g. clicking through grid rows without switching
+  // modes each time) — not just on the button click that first selects it.
+  useEffect(() => {
+    if (mode === "avro" && payloadBase64 && connectionId && topic) {
+      runDecodeAvro({ connectionId, topic, payloadBase64 });
+    }
+  }, [mode, payloadBase64, connectionId, topic, runDecodeAvro]);
 
   if (!message) {
     return <p className="resizable-pane-placeholder">Select a message to view its payload.</p>;
@@ -26,7 +41,6 @@ export function MessagePayloadViewer() {
 
   const bytes = message.payloadBase64 !== null ? base64ToBytes(message.payloadBase64) : null;
   const text = bytes !== null ? bytesToText(bytes) : null;
-  const avro = bytes !== null ? detectConfluentAvro(bytes) : null;
   const json = mode === "json" && text !== null ? tryParseJson(text) : undefined;
 
   return (
@@ -84,11 +98,6 @@ export function MessagePayloadViewer() {
             </p>
           ) : (
             <>
-              {avro && (
-                <p className="message-payload-avro-banner">
-                  Avro (schema id: {avro.schemaId}) — schema registry decoding not implemented; showing raw bytes.
-                </p>
-              )}
               <div className="message-payload-toggle" role="group" aria-label="Payload view mode">
                 <button
                   type="button"
@@ -104,6 +113,13 @@ export function MessagePayloadViewer() {
                 >
                   JSON
                 </button>
+                <button
+                  type="button"
+                  className={mode === "avro" ? "message-payload-toggle-button--active" : ""}
+                  onClick={() => setMode("avro")}
+                >
+                  Avro
+                </button>
               </div>
               {mode === "text" && <pre className="message-payload-body">{text}</pre>}
               {mode === "json" &&
@@ -118,6 +134,21 @@ export function MessagePayloadViewer() {
                 ) : (
                   <p role="alert">Payload is not valid JSON.</p>
                 ))}
+              {mode === "avro" && (
+                <>
+                  {decodeAvro.isPending && <p>Decoding…</p>}
+                  {decodeAvro.isError && <p role="alert">{decodeAvro.error?.message}</p>}
+                  {decodeAvro.isSuccess && (
+                    <JsonTreeView
+                      value={decodeAvro.data}
+                      onOpenInNewTab={() => {
+                        const title = `Partition ${message.partition} · Offset ${message.offset}`;
+                        selectTab(openJsonTab(title, decodeAvro.data));
+                      }}
+                    />
+                  )}
+                </>
+              )}
             </>
           )}
         </div>
