@@ -72,9 +72,9 @@ pub async fn delete(
     Ok(())
 }
 
-/// Called when a connection is deleted (see `connection_delete`) — explicit
-/// cleanup since `topic_schemas` has no enforced foreign key (see the
-/// migration file's comment).
+/// Will be called when a connection is deleted (Task 5 wires this into
+/// `connection_delete`) — explicit cleanup since `topic_schemas` has no
+/// enforced foreign key (see the migration file's comment).
 pub async fn delete_all_for_connection(
     pool: &SqlitePool,
     connection_id: &str,
