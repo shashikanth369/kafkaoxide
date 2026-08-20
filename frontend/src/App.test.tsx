@@ -1,7 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { App } from "./App";
+import { useJsonViewerTabsStore } from "./features/tabs/useJsonViewerTabsStore";
+import { useTabsStore } from "./features/tabs/useTabsStore";
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
 vi.mock("@tauri-apps/api/event", () => ({ listen: vi.fn(() => Promise.resolve(() => {})) }));
@@ -76,5 +78,27 @@ describe("App", () => {
     await screen.findByText("No connections yet. Add one to get started.");
 
     expect(screen.queryByTestId("resizable-pane-right")).not.toBeInTheDocument();
+  });
+
+  it("hides the left sidebar while a JSON/XML viewer tab is active, and restores it when switching away", async () => {
+    const { invoke } = await import("@tauri-apps/api/core");
+    vi.mocked(invoke).mockImplementation((command: string) => {
+      if (command === "tab_list") return Promise.resolve([]);
+      if (command === "connection_list") return Promise.resolve([]);
+      return Promise.reject(new Error(`unexpected command ${command}`));
+    });
+
+    render(<App />);
+    await screen.findByText("No connections yet. Add one to get started.");
+    expect(screen.getByTestId("resizable-pane-left")).toBeInTheDocument();
+
+    const jsonTabId = useJsonViewerTabsStore.getState().openTab("Partition 0 · Offset 1", { a: 1 });
+    useTabsStore.getState().selectTab(jsonTabId);
+
+    await waitFor(() => expect(screen.queryByTestId("resizable-pane-left")).not.toBeInTheDocument());
+
+    useTabsStore.setState({ activeTabId: null });
+
+    await waitFor(() => expect(screen.getByTestId("resizable-pane-left")).toBeInTheDocument());
   });
 });

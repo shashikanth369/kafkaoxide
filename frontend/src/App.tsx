@@ -75,26 +75,30 @@ function AppShell() {
       <div className="app-body">
         <ResizableShell
           left={
-            <aside className="app-sidebar">
-              <button type="button" onClick={() => setShowModal(true)}>
-                + Add Cluster
-              </button>
-              {showModal && (
-                <ConnectionModal
-                  initialDraft={cloneDraft ?? undefined}
-                  onAdd={async (connection) => {
-                    await createConnection.mutateAsync(connection);
-                    closeModal();
-                  }}
-                  onCancel={closeModal}
-                />
-              )}
-              <ConnectionTree onClone={handleClone} />
-            </aside>
+            activeJsonTab && !settingsOpen ? undefined : (
+              <aside className="app-sidebar">
+                <button type="button" onClick={() => setShowModal(true)}>
+                  + Add Cluster
+                </button>
+                {showModal && (
+                  <ConnectionModal
+                    initialDraft={cloneDraft ?? undefined}
+                    onAdd={async (connection) => {
+                      await createConnection.mutateAsync(connection);
+                      closeModal();
+                    }}
+                    onCancel={closeModal}
+                  />
+                )}
+                <ConnectionTree onClone={handleClone} />
+              </aside>
+            )
           }
           middle={
             settingsOpen ? (
-              <SettingsPanel />
+              <main className="app-main">
+                <SettingsPanel />
+              </main>
             ) : (
               <main className="app-main" key={activeTabId ?? "no-tab"}>
                 {activeJsonTab ? (
