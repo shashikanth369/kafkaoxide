@@ -27,10 +27,19 @@ function formatValue(params: ValueGetterParams<TopicMessage>): string {
   return bytesToText(bytes);
 }
 
+/** Keeps the search bar's quick filter scoped to key + value by opting these columns out of it. */
+const excludeFromQuickFilter = () => "";
+
 const COLUMN_DEFS: ColDef<TopicMessage>[] = [
-  { field: "partition", headerName: "Partition", width: 100 },
-  { field: "offset", headerName: "Offset", width: 100 },
-  { field: "timestampMs", headerName: "Timestamp", valueFormatter: formatTimestamp, width: 200 },
+  { field: "partition", headerName: "Partition", width: 100, getQuickFilterText: excludeFromQuickFilter },
+  { field: "offset", headerName: "Offset", width: 100, getQuickFilterText: excludeFromQuickFilter },
+  {
+    field: "timestampMs",
+    headerName: "Timestamp",
+    valueFormatter: formatTimestamp,
+    width: 200,
+    getQuickFilterText: excludeFromQuickFilter,
+  },
   { field: "key", headerName: "Key", width: 150 },
   { headerName: "Value", valueGetter: formatValue, cellRenderer: ValueCell, flex: 1 },
 ];

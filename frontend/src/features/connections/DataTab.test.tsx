@@ -19,6 +19,8 @@ interface MockColDef {
   valueGetter?: (params: any) => string;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   cellRenderer?: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  getQuickFilterText?: (params: any) => string;
 }
 let lastGridProps: {
   rowData: unknown[];
@@ -338,6 +340,22 @@ describe("DataTab", () => {
     await user.type(screen.getByLabelText("Search messages"), "order-1");
 
     await waitFor(() => expect(lastGridProps?.quickFilterText).toBe("order-1"));
+  });
+
+  it("excludes partition, offset, and timestamp from the quick filter, leaving only key and value searchable", () => {
+    renderWithClient(<DataTab connectionId="1" topicName="orders" />);
+
+    const columnDefs = lastGridProps?.columnDefs ?? [];
+    const excluded = ["Partition", "Offset", "Timestamp"];
+    for (const headerName of excluded) {
+      const colDef = columnDefs.find((c) => c.headerName === headerName);
+      expect(colDef?.getQuickFilterText?.({})).toBe("");
+    }
+
+    const keyColDef = columnDefs.find((c) => c.headerName === "Key");
+    const valueColDef = columnDefs.find((c) => c.headerName === "Value");
+    expect(keyColDef?.getQuickFilterText).toBeUndefined();
+    expect(valueColDef?.getQuickFilterText).toBeUndefined();
   });
 
   it("selects a message into the viewer store when a grid row is clicked", () => {
