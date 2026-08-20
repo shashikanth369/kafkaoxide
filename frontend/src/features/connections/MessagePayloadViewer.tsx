@@ -1,13 +1,14 @@
 import { useEffect, useState } from "react";
 import { JsonTreeView } from "../../components/JsonTreeView";
+import { XmlTreeView } from "../../components/XmlTreeView";
 import { useDecodeAvro } from "./useClusterResources";
 import { useJsonViewerTabsStore } from "../tabs/useJsonViewerTabsStore";
 import { useTabsStore } from "../tabs/useTabsStore";
 import { useMessageViewerStore } from "../workspace/useMessageViewerStore";
-import { base64ToBytes, bytesToText, tryParseJson } from "./payloadDecoding";
+import { base64ToBytes, bytesToText, tryParseJson, tryParseXml } from "./payloadDecoding";
 
 type PanelTabId = "headers" | "value";
-type ValueMode = "text" | "json" | "avro";
+type ValueMode = "text" | "json" | "avro" | "xml";
 
 const PANEL_TABS: { id: PanelTabId; label: string }[] = [
   { id: "headers", label: "Headers" },
@@ -42,6 +43,7 @@ export function MessagePayloadViewer() {
   const bytes = message.payloadBase64 !== null ? base64ToBytes(message.payloadBase64) : null;
   const text = bytes !== null ? bytesToText(bytes) : null;
   const json = mode === "json" && text !== null ? tryParseJson(text) : undefined;
+  const xml = mode === "xml" && text !== null ? tryParseXml(text) : undefined;
 
   return (
     <div className="message-payload-viewer">
@@ -120,6 +122,13 @@ export function MessagePayloadViewer() {
                 >
                   Avro
                 </button>
+                <button
+                  type="button"
+                  className={mode === "xml" ? "message-payload-toggle-button--active" : ""}
+                  onClick={() => setMode("xml")}
+                >
+                  XML
+                </button>
               </div>
               {mode === "text" && <pre className="message-payload-body">{text}</pre>}
               {mode === "json" &&
@@ -149,6 +158,18 @@ export function MessagePayloadViewer() {
                   )}
                 </>
               )}
+              {mode === "xml" &&
+                (xml !== undefined ? (
+                  <XmlTreeView
+                    value={xml}
+                    onOpenInNewTab={() => {
+                      const title = `Partition ${message.partition} · Offset ${message.offset}`;
+                      selectTab(openJsonTab(title, xml, "xml"));
+                    }}
+                  />
+                ) : (
+                  <p role="alert">Payload is not valid XML.</p>
+                ))}
             </>
           )}
         </div>

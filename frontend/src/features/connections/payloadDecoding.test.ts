@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { base64ToBytes, bytesToText, detectConfluentAvro, tryParseJson } from "./payloadDecoding";
+import { base64ToBytes, bytesToText, detectConfluentAvro, formatXmlNode, tryParseJson, tryParseXml } from "./payloadDecoding";
 
 function toBase64(bytes: number[]): string {
   return btoa(String.fromCharCode(...bytes));
@@ -30,6 +30,55 @@ describe("tryParseJson", () => {
 
   it("returns undefined for an empty string", () => {
     expect(tryParseJson("")).toBeUndefined();
+  });
+});
+
+describe("tryParseXml", () => {
+  it("parses a well-formed XML document into a tree", () => {
+    expect(tryParseXml('<root a="1"><child>hi</child></root>')).toEqual({
+      tag: "root",
+      attributes: [["a", "1"]],
+      children: [{ tag: "child", attributes: [], children: [], text: "hi" }],
+      text: null,
+    });
+  });
+
+  it("returns undefined for malformed XML", () => {
+    expect(tryParseXml("<root><unclosed></root>")).toBeUndefined();
+  });
+
+  it("returns undefined for JSON text", () => {
+    expect(tryParseXml('{"a":1}')).toBeUndefined();
+  });
+
+  it("returns undefined for an empty string", () => {
+    expect(tryParseXml("")).toBeUndefined();
+  });
+});
+
+describe("formatXmlNode", () => {
+  it("pretty-prints a leaf element with text content", () => {
+    expect(formatXmlNode({ tag: "a", attributes: [], children: [], text: "1" })).toBe("<a>1</a>");
+  });
+
+  it("pretty-prints a self-closing leaf element with no text", () => {
+    expect(formatXmlNode({ tag: "a", attributes: [], children: [], text: null })).toBe("<a/>");
+  });
+
+  it("pretty-prints attributes inline with the opening tag", () => {
+    expect(formatXmlNode({ tag: "user", attributes: [["id", "1"]], children: [], text: null })).toBe(
+      '<user id="1"/>',
+    );
+  });
+
+  it("pretty-prints nested children with indentation", () => {
+    const tree = {
+      tag: "root",
+      attributes: [],
+      children: [{ tag: "child", attributes: [], children: [], text: "hi" }],
+      text: null,
+    };
+    expect(formatXmlNode(tree)).toBe("<root>\n  <child>hi</child>\n</root>");
   });
 });
 

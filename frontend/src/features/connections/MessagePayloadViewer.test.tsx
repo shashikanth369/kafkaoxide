@@ -94,6 +94,92 @@ describe("MessagePayloadViewer", () => {
     expect(screen.getByText(/not valid json/i)).toBeInTheDocument();
   });
 
+  it("shows an error message when JSON is requested but the payload is XML", async () => {
+    useMessageViewerStore.setState({
+      message: { partition: 0, offset: 1, timestampMs: null, key: null, payloadBase64: btoa("<a>1</a>"), headers: [] },
+    });
+    const user = userEvent.setup();
+    renderWithClient(<MessagePayloadViewer />);
+
+    await user.click(screen.getByRole("button", { name: "JSON" }));
+
+    expect(screen.getByText(/not valid json/i)).toBeInTheDocument();
+  });
+
+  it("renders the payload as an XML tree when the XML toggle is clicked", async () => {
+    useMessageViewerStore.setState({
+      message: {
+        partition: 0,
+        offset: 1,
+        timestampMs: null,
+        key: null,
+        payloadBase64: btoa("<order><id>1</id></order>"),
+        headers: [],
+      },
+    });
+    const user = userEvent.setup();
+    renderWithClient(<MessagePayloadViewer />);
+
+    await user.click(screen.getByRole("button", { name: "XML" }));
+
+    expect(screen.getByText("<order>")).toBeInTheDocument();
+    expect(screen.getByText("1")).toBeInTheDocument();
+  });
+
+  it("opens the XML value as its own app tab and switches to it when 'Open in new tab' is clicked", async () => {
+    useMessageViewerStore.setState({
+      message: {
+        partition: 2,
+        offset: 7,
+        timestampMs: null,
+        key: null,
+        payloadBase64: btoa("<order/>"),
+        headers: [],
+      },
+    });
+    const user = userEvent.setup();
+    renderWithClient(<MessagePayloadViewer />);
+
+    await user.click(screen.getByRole("button", { name: "XML" }));
+    await user.click(screen.getByRole("button", { name: "Open in new tab" }));
+
+    const tabs = useJsonViewerTabsStore.getState().tabs;
+    expect(tabs).toHaveLength(1);
+    expect(tabs[0]).toMatchObject({ title: "Partition 2 · Offset 7", kind: "xml" });
+    expect(useTabsStore.getState().activeTabId).toBe(tabs[0].id);
+  });
+
+  it("shows an error message when XML is requested but the payload isn't valid XML", async () => {
+    useMessageViewerStore.setState({
+      message: { partition: 0, offset: 1, timestampMs: null, key: null, payloadBase64: btoa("not xml"), headers: [] },
+    });
+    const user = userEvent.setup();
+    renderWithClient(<MessagePayloadViewer />);
+
+    await user.click(screen.getByRole("button", { name: "XML" }));
+
+    expect(screen.getByText(/not valid xml/i)).toBeInTheDocument();
+  });
+
+  it("shows an error message when XML is requested but the payload is JSON", async () => {
+    useMessageViewerStore.setState({
+      message: {
+        partition: 0,
+        offset: 1,
+        timestampMs: null,
+        key: null,
+        payloadBase64: btoa('{"id":1}'),
+        headers: [],
+      },
+    });
+    const user = userEvent.setup();
+    renderWithClient(<MessagePayloadViewer />);
+
+    await user.click(screen.getByRole("button", { name: "XML" }));
+
+    expect(screen.getByText(/not valid xml/i)).toBeInTheDocument();
+  });
+
   it("decodes and renders the payload as a JSON tree when Avro is clicked", async () => {
     setInvokeHandlers({ connection_decode_avro: () => ({ id: 1, name: "orders" }) });
     useMessageViewerStore.setState({
