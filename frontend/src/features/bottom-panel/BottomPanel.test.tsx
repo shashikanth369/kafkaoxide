@@ -118,7 +118,13 @@ describe("BottomPanel tab memory", () => {
     useMessageViewerStore.setState({
       activeTabId: "tab-1",
       message: { partition: 0, offset: 1, timestampMs: null, key: null, payloadBase64: null, headers: [] },
-      byTab: { "tab-1": { partition: 0, offset: 1, timestampMs: null, key: null, payloadBase64: null, headers: [] } },
+      byTab: {
+        "tab-1": {
+          message: { partition: 0, offset: 1, timestampMs: null, key: null, payloadBase64: null, headers: [] },
+          connectionId: "1",
+          topic: "orders",
+        },
+      },
     });
     const dataKey = dataTabCacheKey("tab-1", "1", "orders");
     useTabDataStore.setState({

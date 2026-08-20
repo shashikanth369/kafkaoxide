@@ -244,7 +244,7 @@ export function DataTab({ connectionId, topicName, partitionId }: DataTabProps) 
             // time, racing the in-flight per-row fetch.
             const target = event.event?.target;
             if (target instanceof HTMLElement && target.closest("button")) return;
-            if (event.data) viewMessage(event.data);
+            if (event.data) viewMessage(event.data, connectionId, topicName);
           }}
         />
       </div>

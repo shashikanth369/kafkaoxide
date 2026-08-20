@@ -59,7 +59,7 @@ function resetLastGridProps() {
 beforeEach(() => {
   vi.clearAllMocks();
   resetLastGridProps();
-  useMessageViewerStore.setState({ message: null });
+  useMessageViewerStore.setState({ message: null, connectionId: null, topic: null });
   useTabDataStore.setState({ messagesByTab: {} });
 });
 
@@ -347,6 +347,8 @@ describe("DataTab", () => {
     lastGridProps?.onRowClicked({ data: message });
 
     expect(useMessageViewerStore.getState().message).toEqual(message);
+    expect(useMessageViewerStore.getState().connectionId).toBe("1");
+    expect(useMessageViewerStore.getState().topic).toBe("orders");
   });
 
   it("does not open the viewer when the row click originated from a button (e.g. Fetch payload)", () => {
