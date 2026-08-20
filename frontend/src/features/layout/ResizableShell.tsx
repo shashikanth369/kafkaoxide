@@ -2,7 +2,7 @@ import { ReactNode } from "react";
 import { useResizablePanes } from "./useResizablePanes";
 
 export interface ResizableShellProps {
-  left: ReactNode;
+  left?: ReactNode;
   middle: ReactNode;
   right?: ReactNode;
   /** Overridable for tests; defaults to a single shared app-wide layout. */
@@ -14,23 +14,31 @@ export function ResizableShell({ left, middle, right, storageKey = "kafkaoxide.p
 
   return (
     <div className="resizable-shell">
-      <div className="resizable-pane resizable-pane--left" data-testid="resizable-pane-left" style={{ width: leftWidth }}>
-        {left}
-      </div>
-      <div
-        className="resizable-divider resizable-divider--persistent"
-        role="separator"
-        aria-orientation="vertical"
-        aria-label="Resize left panel"
-        onPointerDown={startResizingLeft}
-      />
+      {left && (
+        <>
+          <div
+            className="resizable-pane resizable-pane--left"
+            data-testid="resizable-pane-left"
+            style={{ width: leftWidth }}
+          >
+            {left}
+          </div>
+          <div
+            className="resizable-divider resizable-divider--persistent"
+            role="separator"
+            aria-orientation="vertical"
+            aria-label="Resize left panel"
+            onPointerDown={startResizingLeft}
+          />
+        </>
+      )}
       <div className="resizable-pane resizable-pane--middle" data-testid="resizable-pane-middle">
         {middle}
       </div>
       {right && (
         <>
           <div
-            className="resizable-divider"
+            className="resizable-divider resizable-divider--persistent"
             role="separator"
             aria-orientation="vertical"
             aria-label="Resize right panel"

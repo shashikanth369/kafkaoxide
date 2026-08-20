@@ -72,4 +72,24 @@ describe("ResizableShell", () => {
     expect(screen.queryByTestId("resizable-pane-right")).not.toBeInTheDocument();
     expect(screen.queryByRole("separator", { name: "Resize right panel" })).not.toBeInTheDocument();
   });
+
+  it("omits the left pane and its resize handle entirely when no content is given", () => {
+    render(<ResizableShell storageKey="test-shell-6" middle={<div>Middle</div>} />);
+
+    expect(screen.queryByTestId("resizable-pane-left")).not.toBeInTheDocument();
+    expect(screen.queryByRole("separator", { name: "Resize left panel" })).not.toBeInTheDocument();
+  });
+
+  it("gives the right resize handle a persistently visible affordance, same as the left one", () => {
+    render(
+      <ResizableShell
+        storageKey="test-shell-7"
+        left={<div>Left</div>}
+        middle={<div>Middle</div>}
+        right={<div>Right</div>}
+      />,
+    );
+
+    expect(screen.getByRole("separator", { name: "Resize right panel" })).toHaveClass("resizable-divider--persistent");
+  });
 });
