@@ -29,6 +29,8 @@ export const KAFKA_VERSIONS = [
   "3.7",
 ] as const;
 
+export type SchemaFormat = "avro" | "protobuf";
+
 export interface Connection {
   id: string;
   name: string;
@@ -188,6 +190,14 @@ export const api = {
     invoke<ConfigEntry[]>("connection_describe_topic_config", { id, topic }),
   fetchConsumerGroupLag: (id: string, groupId: string) =>
     invoke<ConsumerGroupLag>("connection_fetch_consumer_group_lag", { id, groupId }),
+  getTopicSchema: (connectionId: string, topic: string, format: SchemaFormat) =>
+    invoke<string | null>("topic_schema_get", { connectionId, topic, format }),
+  setTopicSchema: (connectionId: string, topic: string, format: SchemaFormat, schemaText: string) =>
+    invoke<void>("topic_schema_set", { connectionId, topic, format, schemaText }),
+  deleteTopicSchema: (connectionId: string, topic: string, format: SchemaFormat) =>
+    invoke<void>("topic_schema_delete", { connectionId, topic, format }),
+  decodeAvro: (connectionId: string, topic: string, payloadBase64: string) =>
+    invoke<unknown>("connection_decode_avro", { id: connectionId, topic, payloadBase64 }),
   listTabs: () => invoke<Tab[]>("tab_list"),
   createTab: (name: string) => invoke<Tab>("tab_create", { name }),
   renameTab: (id: string, name: string) => invoke<void>("tab_rename", { id, name }),
