@@ -95,10 +95,39 @@ describe("App", () => {
     const jsonTabId = useJsonViewerTabsStore.getState().openTab("Partition 0 · Offset 1", { a: 1 });
     useTabsStore.getState().selectTab(jsonTabId);
 
-    await waitFor(() => expect(screen.queryByTestId("resizable-pane-left")).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.getByTestId("resizable-pane-left")).not.toBeVisible());
 
     useTabsStore.setState({ activeTabId: null });
 
-    await waitFor(() => expect(screen.getByTestId("resizable-pane-left")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByTestId("resizable-pane-left")).toBeVisible());
+  });
+
+  it("keeps the connection tree's expanded state when switching to a JSON tab and back", async () => {
+    const { invoke } = await import("@tauri-apps/api/core");
+    vi.mocked(invoke).mockImplementation((command: string) => {
+      if (command === "tab_list") return Promise.resolve([]);
+      if (command === "connection_list") return Promise.resolve([{ id: "1", name: "Local Kafka" }]);
+      if (command === "connection_check_status") return Promise.resolve("REACHABLE");
+      if (command === "connection_is_connected") return Promise.resolve(true);
+      if (command === "connection_list_brokers") return Promise.resolve([]);
+      if (command === "connection_list_topics") return Promise.resolve([]);
+      if (command === "connection_list_consumer_groups") return Promise.resolve([]);
+      return Promise.reject(new Error(`unexpected command ${command}`));
+    });
+    const user = userEvent.setup();
+
+    render(<App />);
+    await screen.findByText("Local Kafka");
+    await user.click(await screen.findByLabelText("Expand Local Kafka"));
+    expect(screen.getByLabelText("Collapse Local Kafka")).toBeInTheDocument();
+
+    const jsonTabId = useJsonViewerTabsStore.getState().openTab("Partition 0 · Offset 1", { a: 1 });
+    useTabsStore.getState().selectTab(jsonTabId);
+    await waitFor(() => expect(screen.getByTestId("resizable-pane-left")).not.toBeVisible());
+
+    useTabsStore.setState({ activeTabId: null });
+    await waitFor(() => expect(screen.getByTestId("resizable-pane-left")).toBeVisible());
+
+    expect(screen.getByLabelText("Collapse Local Kafka")).toBeInTheDocument();
   });
 });

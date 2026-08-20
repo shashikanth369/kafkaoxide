@@ -92,4 +92,19 @@ describe("ResizableShell", () => {
 
     expect(screen.getByRole("separator", { name: "Resize right panel" })).toHaveClass("resizable-divider--persistent");
   });
+
+  it("keeps the left pane mounted but visually hides it and its divider when leftHidden is set", () => {
+    const { container } = render(
+      <ResizableShell
+        storageKey="test-shell-8"
+        left={<div>Left content</div>}
+        leftHidden
+        middle={<div>Middle</div>}
+      />,
+    );
+
+    expect(screen.getByText("Left content")).toBeInTheDocument();
+    expect(screen.getByTestId("resizable-pane-left")).not.toBeVisible();
+    expect(container.querySelector('[aria-label="Resize left panel"]')).not.toBeVisible();
+  });
 });
