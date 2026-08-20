@@ -41,8 +41,11 @@ pub async fn topic_schema_delete(
     Ok(kafkaoxide_db::topic_schemas::delete(&state.pool, &connection_id, &topic, &format).await?)
 }
 
-/// Backs the payload viewer's "Avro" mode. Decode precedence: a manual
-/// per-topic schema always wins when set (decoding the whole payload — no
+/// Backs the payload viewer's "Avro" mode. Decode precedence: if the
+/// payload is itself an Avro Object Container File (schema embedded in the
+/// message), decode it directly — a manual or registry schema would never
+/// match its framing anyway, so this check wins outright. Otherwise a
+/// manual per-topic schema wins when set (decoding the whole payload — no
 /// wire-format header to strip); otherwise, if the payload carries the
 /// Confluent wire-format header and this connection has a Schema Registry
 /// configured, fetch the schema by the embedded id and decode the bytes
@@ -58,6 +61,10 @@ pub async fn connection_decode_avro(
         .decode(&payload_base64)
         .change_context(AppError::Decode)
         .attach_printable("payload isn't valid base64")?;
+
+    if kafkaoxide_avro::detect_container_file(&bytes) {
+        return Ok(kafkaoxide_avro::decode_container(&bytes)?);
+    }
 
     if let Some(manual_schema) = kafkaoxide_db::topic_schemas::get(&state.pool, &id, &topic, "avro").await? {
         return Ok(kafkaoxide_avro::decode(&bytes, &manual_schema)?);
