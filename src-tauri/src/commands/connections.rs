@@ -11,9 +11,26 @@ pub struct CommandError {
 impl From<error_stack::Report<kafkaoxide_core::AppError>> for CommandError {
     fn from(report: error_stack::Report<kafkaoxide_core::AppError>) -> Self {
         CommandError {
-            message: format!("{report:?}"),
+            message: format_report(&report),
         }
     }
+}
+
+/// Renders a report as a single readable line for the frontend to show
+/// as-is: the top-level `AppError`'s message, followed by each
+/// `.attach_printable(...)` reason in the chain. Plain `{report:?}` isn't
+/// fit for end users — it includes box-drawing characters and `at
+/// file:line` source locations meant for developers reading logs.
+fn format_report(report: &error_stack::Report<kafkaoxide_core::AppError>) -> String {
+    use error_stack::{AttachmentKind, FrameKind};
+
+    let mut parts = vec![report.current_context().to_string()];
+    for frame in report.frames() {
+        if let FrameKind::Attachment(AttachmentKind::Printable(printable)) = frame.kind() {
+            parts.push(printable.to_string());
+        }
+    }
+    parts.join(": ")
 }
 
 /// The New Connection modal's SASL, Schema Registry, and broker-SSL secret
