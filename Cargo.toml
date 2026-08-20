@@ -5,6 +5,8 @@ members = [
   "backend/db",
   "backend/secrets",
   "backend/kafka",
+  "backend/avro",
+  "backend/schema-registry",
   "src-tauri",
 ]
 
@@ -21,3 +23,5 @@ kafkaoxide-core = { path = "backend/core" }
 kafkaoxide-db = { path = "backend/db" }
 kafkaoxide-secrets = { path = "backend/secrets" }
 kafkaoxide-kafka = { path = "backend/kafka" }
+kafkaoxide-avro = { path = "backend/avro" }
+kafkaoxide-schema-registry = { path = "backend/schema-registry" }
