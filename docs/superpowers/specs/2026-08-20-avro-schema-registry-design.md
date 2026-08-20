@@ -43,7 +43,7 @@ One new table, shaped to hold Protobuf's manual schemas too once that lands, rat
 
 ```sql
 CREATE TABLE topic_schemas (
-    connection_id TEXT NOT NULL REFERENCES connections(id) ON DELETE CASCADE,
+    connection_id TEXT NOT NULL,
     topic TEXT NOT NULL,
     format TEXT NOT NULL CHECK (format IN ('avro', 'protobuf')),
     schema_text TEXT NOT NULL,
@@ -53,7 +53,7 @@ CREATE TABLE topic_schemas (
 );
 ```
 
-`kafkaoxide-db::topic_schemas`: `get_topic_schema`, `set_topic_schema` (upsert), `delete_topic_schema` — same shape as the existing `connections` module's CRUD functions.
+`kafkaoxide-db::topic_schemas`: `get`, `set` (upsert), `delete`, and `delete_all_for_connection` (called from `connection_delete` — no `ON DELETE CASCADE`, since this app never enables SQLite's `foreign_keys` pragma, so a declared FK here would silently never fire) — same shape as the existing `connections`/`tabs` modules' CRUD functions.
 
 ### Decode decision order
 
