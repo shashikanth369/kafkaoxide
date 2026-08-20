@@ -2,8 +2,8 @@ import { useState } from "react";
 
 export interface JsonTreeViewProps {
   value: unknown;
-  /** Opens `value` as its own tab in the app (there's no browser to open a real new tab in). */
-  onOpenInNewTab: () => void;
+  /** Opens `value` as its own tab in the app (there's no browser to open a real new tab in). Omit to hide the button — e.g. a view that's already a dedicated JSON tab has nothing new to open. */
+  onOpenInNewTab?: () => void;
 }
 
 function CopyIcon() {
@@ -131,15 +131,17 @@ export function JsonTreeView({ value, onOpenInNewTab }: JsonTreeViewProps) {
   return (
     <div className="json-tree">
       <div className="json-tree-toolbar">
-        <button
-          type="button"
-          className="json-tree-icon-button"
-          title="Open in new tab"
-          aria-label="Open in new tab"
-          onClick={onOpenInNewTab}
-        >
-          <ExternalLinkIcon />
-        </button>
+        {onOpenInNewTab && (
+          <button
+            type="button"
+            className="json-tree-icon-button"
+            title="Open in new tab"
+            aria-label="Open in new tab"
+            onClick={onOpenInNewTab}
+          >
+            <ExternalLinkIcon />
+          </button>
+        )}
         <button
           type="button"
           className="json-tree-icon-button"

@@ -3,6 +3,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useJsonViewerTabsStore } from "../tabs/useJsonViewerTabsStore";
 import { useTabsStore } from "../tabs/useTabsStore";
+import { useTabOrderStore } from "../tabs/useTabOrderStore";
 import { useMessageViewerStore } from "../workspace/useMessageViewerStore";
 import { MessagePayloadViewer } from "./MessagePayloadViewer";
 
@@ -10,6 +11,7 @@ beforeEach(() => {
   useMessageViewerStore.setState({ message: null });
   useJsonViewerTabsStore.setState({ tabs: [] });
   useTabsStore.setState({ tabs: [], activeTabId: null, error: null });
+  useTabOrderStore.setState({ anchors: {} });
 });
 
 describe("MessagePayloadViewer", () => {

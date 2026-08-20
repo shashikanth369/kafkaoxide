@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { api, Tab } from "../../lib/tauri";
+import { useTabOrderStore } from "./useTabOrderStore";
 
 interface TabsState {
   tabs: Tab[];
@@ -27,6 +28,9 @@ export const useTabsStore = create<TabsState>((set, get) => ({
   loadTabs: async () => {
     try {
       const tabs = await api.listTabs();
+      for (const tab of tabs) {
+        useTabOrderStore.getState().registerRoot(tab.id);
+      }
       set({
         tabs,
         activeTabId: get().activeTabId ?? tabs[0]?.id ?? null,
@@ -37,8 +41,10 @@ export const useTabsStore = create<TabsState>((set, get) => ({
     }
   },
   addTab: async (name: string) => {
+    const activeBefore = get().activeTabId;
     try {
       const tab = await api.createTab(name);
+      useTabOrderStore.getState().registerAfter(tab.id, activeBefore);
       set((state) => ({ tabs: [...state.tabs, tab], activeTabId: tab.id, error: null }));
     } catch (err) {
       set({ error: errorMessage(err, "Failed to create tab") });
@@ -58,6 +64,7 @@ export const useTabsStore = create<TabsState>((set, get) => ({
   deleteTab: async (id: string) => {
     try {
       await api.deleteTab(id);
+      useTabOrderStore.getState().remove(id);
       set((state) => {
         const tabs = state.tabs.filter((tab) => tab.id !== id);
         if (state.activeTabId !== id) {

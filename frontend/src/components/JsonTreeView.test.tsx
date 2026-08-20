@@ -78,4 +78,10 @@ describe("JsonTreeView", () => {
 
     expect(onOpenInNewTab).toHaveBeenCalled();
   });
+
+  it("hides the 'Open in new tab' button when onOpenInNewTab isn't provided", () => {
+    render(<JsonTreeView value={{ a: 1 }} />);
+
+    expect(screen.queryByRole("button", { name: "Open in new tab" })).not.toBeInTheDocument();
+  });
 });

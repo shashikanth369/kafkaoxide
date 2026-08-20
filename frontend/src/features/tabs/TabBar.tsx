@@ -1,6 +1,7 @@
 import { KeyboardEvent, PointerEvent as ReactPointerEvent, useEffect, useRef, useState } from "react";
 import { useTabsStore } from "./useTabsStore";
 import { useJsonViewerTabsStore } from "./useJsonViewerTabsStore";
+import { mergeTabOrder, useTabOrderStore } from "./useTabOrderStore";
 import { useSettingsPanelStore } from "../settings/useSettingsPanelStore";
 
 export function TabBar() {
@@ -15,6 +16,8 @@ export function TabBar() {
   const commitTabOrder = useTabsStore((s) => s.commitTabOrder);
   const jsonTabs = useJsonViewerTabsStore((s) => s.tabs);
   const closeJsonTab = useJsonViewerTabsStore((s) => s.closeTab);
+  const anchors = useTabOrderStore((s) => s.anchors);
+  const clearAnchor = useTabOrderStore((s) => s.clearAnchor);
   const settingsOpen = useSettingsPanelStore((s) => s.isOpen);
   const closeSettings = useSettingsPanelStore((s) => s.close);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -59,6 +62,10 @@ export function TabBar() {
     function handlePointerUp() {
       setDraggingId(null);
       if (didReorderRef.current) {
+        // A manual drag always wins over the "opened after tab X" anchor —
+        // once the user has explicitly placed a tab, it's a root positioned
+        // by its plain array order like any other workspace tab.
+        clearAnchor(draggingId as string);
         commitTabOrder();
       }
     }
@@ -109,84 +116,100 @@ export function TabBar() {
     }
   }
 
+  const liveIds = new Set<string>([...tabs.map((t) => t.id), ...jsonTabs.map((t) => t.id)]);
+  const rootOrder = tabs.filter((t) => (anchors[t.id] ?? null) === null).map((t) => t.id);
+  const anchoredIds = [
+    ...tabs.filter((t) => (anchors[t.id] ?? null) !== null).map((t) => t.id),
+    ...jsonTabs.map((t) => t.id),
+  ];
+  const order = mergeTabOrder(rootOrder, anchoredIds, anchors, liveIds);
+
   return (
     <div className="tab-bar-region">
       <div className="tab-bar" role="tablist">
-        {tabs.map((tab) => (
-          <div
-            key={tab.id}
-            ref={(el) => {
-              tabRefs.current[tab.id] = el;
-            }}
-            role="tab"
-            aria-label={tab.name}
-            aria-selected={tab.id === activeTabId && !settingsOpen}
-            tabIndex={0}
-            className={`tab${draggingId === tab.id ? " tab--dragging" : ""}`}
-            onClick={() => handleTabClick(tab.id)}
-            onDoubleClick={() => startEditing(tab.id, tab.name)}
-            onContextMenu={(e) => {
-              e.preventDefault();
-              startEditing(tab.id, tab.name);
-            }}
-            onPointerDown={(e) => startDragging(e, tab.id)}
-            onKeyDown={(e) => handleTabKeyDown(e, tab.id)}
-          >
-            {editingId === tab.id ? (
-              <input
-                autoFocus
-                value={draftName}
-                aria-label={`Rename tab ${tab.name}`}
-                onChange={(e) => setDraftName(e.target.value)}
-                onBlur={commitEditing}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") commitEditing();
-                  if (e.key === "Escape") setEditingId(null);
+        {order.map((id) => {
+          const tab = tabs.find((t) => t.id === id);
+          if (tab) {
+            return (
+              <div
+                key={tab.id}
+                ref={(el) => {
+                  tabRefs.current[tab.id] = el;
                 }}
-              />
-            ) : (
-              <>
-                <span>{tab.name}</span>
-                <button
-                  type="button"
-                  className="tab-close"
-                  aria-label={`Close tab ${tab.name}`}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    deleteTab(tab.id);
-                  }}
-                >
-                  ×
-                </button>
-              </>
-            )}
-          </div>
-        ))}
-        {jsonTabs.map((tab) => (
-          <div
-            key={tab.id}
-            role="tab"
-            aria-label={tab.title}
-            aria-selected={tab.id === activeTabId && !settingsOpen}
-            tabIndex={0}
-            className="tab"
-            onClick={() => handleTabClick(tab.id)}
-            onKeyDown={(e) => handleTabKeyDown(e, tab.id)}
-          >
-            <span>{tab.title}</span>
-            <button
-              type="button"
-              className="tab-close"
-              aria-label={`Close tab ${tab.title}`}
-              onClick={(e) => {
-                e.stopPropagation();
-                handleCloseJsonTab(tab.id);
-              }}
+                role="tab"
+                aria-label={tab.name}
+                aria-selected={tab.id === activeTabId && !settingsOpen}
+                tabIndex={0}
+                className={`tab${draggingId === tab.id ? " tab--dragging" : ""}`}
+                onClick={() => handleTabClick(tab.id)}
+                onDoubleClick={() => startEditing(tab.id, tab.name)}
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  startEditing(tab.id, tab.name);
+                }}
+                onPointerDown={(e) => startDragging(e, tab.id)}
+                onKeyDown={(e) => handleTabKeyDown(e, tab.id)}
+              >
+                {editingId === tab.id ? (
+                  <input
+                    autoFocus
+                    value={draftName}
+                    aria-label={`Rename tab ${tab.name}`}
+                    onChange={(e) => setDraftName(e.target.value)}
+                    onBlur={commitEditing}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") commitEditing();
+                      if (e.key === "Escape") setEditingId(null);
+                    }}
+                  />
+                ) : (
+                  <>
+                    <span>{tab.name}</span>
+                    <button
+                      type="button"
+                      className="tab-close"
+                      aria-label={`Close tab ${tab.name}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        deleteTab(tab.id);
+                      }}
+                    >
+                      ×
+                    </button>
+                  </>
+                )}
+              </div>
+            );
+          }
+
+          const jsonTab = jsonTabs.find((t) => t.id === id);
+          if (!jsonTab) return null;
+          return (
+            <div
+              key={jsonTab.id}
+              role="tab"
+              aria-label={jsonTab.title}
+              aria-selected={jsonTab.id === activeTabId && !settingsOpen}
+              tabIndex={0}
+              className="tab"
+              onClick={() => handleTabClick(jsonTab.id)}
+              onKeyDown={(e) => handleTabKeyDown(e, jsonTab.id)}
             >
-              ×
-            </button>
-          </div>
-        ))}
+              <span>Json</span>
+              <button
+                type="button"
+                className="tab-close"
+                aria-label={`Close tab ${jsonTab.title}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleCloseJsonTab(jsonTab.id);
+                }}
+              >
+                ×
+              </button>
+            </div>
+          );
+        })}
         {settingsOpen && (
           <div role="tab" aria-label="Settings" aria-selected="true" tabIndex={0} className="tab">
             <span>Settings</span>

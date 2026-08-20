@@ -1,4 +1,6 @@
 import { create } from "zustand";
+import { useTabOrderStore } from "./useTabOrderStore";
+import { useTabsStore } from "./useTabsStore";
 
 export interface JsonViewerTab {
   id: string;
@@ -29,10 +31,12 @@ export const useJsonViewerTabsStore = create<JsonViewerTabsState>((set) => ({
   tabs: [],
   openTab: (title, value) => {
     const id = generateId();
+    useTabOrderStore.getState().registerAfter(id, useTabsStore.getState().activeTabId);
     set((state) => ({ tabs: [...state.tabs, { id, title, value }] }));
     return id;
   },
   closeTab: (id) => {
+    useTabOrderStore.getState().remove(id);
     set((state) => ({ tabs: state.tabs.filter((tab) => tab.id !== id) }));
   },
 }));

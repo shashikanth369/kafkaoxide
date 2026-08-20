@@ -5,6 +5,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { setInvokeHandlers } from "../../lib/testInvoke";
 import { useTabsStore } from "./useTabsStore";
 import { useJsonViewerTabsStore } from "./useJsonViewerTabsStore";
+import { useTabOrderStore } from "./useTabOrderStore";
 import { useSettingsPanelStore } from "../settings/useSettingsPanelStore";
 import { TabBar } from "./TabBar";
 
@@ -20,6 +21,7 @@ function pointerEventAt(type: string, clientX: number): Event {
 beforeEach(() => {
   useTabsStore.setState({ tabs: [], activeTabId: null, error: null });
   useJsonViewerTabsStore.setState({ tabs: [] });
+  useTabOrderStore.setState({ anchors: {} });
   useSettingsPanelStore.setState({ isOpen: false });
 });
 
@@ -318,6 +320,41 @@ describe("TabBar", () => {
       await user.click(screen.getByRole("tab", { name: "Partition 0 · Offset 1" }));
 
       expect(useTabsStore.getState().activeTabId).toBe(jsonId);
+    });
+
+    it("labels a JSON viewer tab 'Json' in the strip, keeping the full title only as its accessible name", () => {
+      useTabsStore.setState({
+        tabs: [{ id: "1", name: "Alpha", position: 0 }],
+        activeTabId: "1",
+      });
+      useJsonViewerTabsStore.getState().openTab("Partition 0 · Offset 1", { a: 1 });
+      render(<TabBar />);
+
+      const jsonTab = screen.getByRole("tab", { name: "Partition 0 · Offset 1" });
+      expect(jsonTab).toHaveTextContent("Json");
+      expect(jsonTab).not.toHaveTextContent("Partition 0 · Offset 1");
+    });
+
+    it("puts a new tab (from the + button) to the right of the JSON tab that was active when it was created", async () => {
+      useTabsStore.setState({
+        tabs: [{ id: "1", name: "Alpha", position: 0 }],
+        activeTabId: "1",
+      });
+      const jsonId = useJsonViewerTabsStore.getState().openTab("Partition 0 · Offset 1", { a: 1 });
+      useTabsStore.setState({ activeTabId: jsonId });
+      setInvokeHandlers({ tab_create: (args: any) => ({ id: "new-1", name: args.name, position: 1 }) });
+      const user = userEvent.setup();
+      render(<TabBar />);
+
+      await user.click(screen.getByLabelText("New tab"));
+
+      await waitFor(() => {
+        expect(screen.getAllByRole("tab").map((el) => el.getAttribute("aria-label"))).toEqual([
+          "Alpha",
+          "Partition 0 · Offset 1",
+          "New Tab",
+        ]);
+      });
     });
 
     it("closes a JSON viewer tab via its close button, without touching the persisted tabs", async () => {
